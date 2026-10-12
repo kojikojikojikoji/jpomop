@@ -18,7 +18,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "hypothesis>=6", "ruff>=0.6", "mypy>=1.10", "types-PyYAML"]
+vocab = ["openpyxl>=3.1"]
+dev = ["openpyxl>=3.1", "pytest>=8", "hypothesis>=6", "ruff>=0.6", "mypy>=1.10", "types-PyYAML"]
 
 [project.scripts]
 jpomop = "jpomop.cli:main"
@@ -30,5 +31,5 @@ line-length = 100
 testpaths = ["tests"]
 
 [[tool.mypy.overrides]]
-module = ["pyarrow", "pyarrow.*"]
+module = ["pyarrow", "pyarrow.*", "openpyxl"]
 ignore_missing_imports = true
