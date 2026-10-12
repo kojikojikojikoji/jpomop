@@ -102,6 +102,7 @@ def test_conditions(tmp_path: Path) -> None:
     j18 = next(r for r in rows if r["condition_source_value"] == "J189")
     assert j18["condition_concept_id"] == 900000101
     assert j18["condition_status_source_value"] == "dx_main"
+    assert j18["condition_status_concept_id"] == 32902
     assert j18["condition_start_date"] == date(2026, 6, 10)
     assert report.skipped_rows["condition_occurrence"] == {"duplicate_in_stay": 1}
     assert report.invariant_problems == []

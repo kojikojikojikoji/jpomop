@@ -60,7 +60,7 @@ def build_condition_occurrence(
             "condition_concept_id": m.concept_id,
             "condition_start_date": v["visit_start_date"],
             "condition_type_concept_id": C.TYPE_CLAIM,
-            "condition_status_concept_id": C.UNKNOWN,
+            "condition_status_concept_id": C.CONDITION_STATUS.get(dx["role"], C.UNKNOWN),
             "visit_occurrence_id": vid,
             "condition_source_value": icd,
             "condition_source_concept_id": m.source_concept_id,
