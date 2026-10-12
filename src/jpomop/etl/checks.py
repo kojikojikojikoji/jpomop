@@ -26,8 +26,13 @@ def check_invariants(cdm: dict[str, pa.Table]) -> list[str]:
         "visit_occurrence": ("visit_start_date", "visit_end_date"),
         "visit_detail": ("visit_detail_start_date", "visit_detail_end_date"),
         "death": ("death_date", "death_date"),
+        "condition_occurrence": ("condition_start_date", "condition_start_date"),
+        "drug_exposure": ("drug_exposure_start_date", "drug_exposure_end_date"),
+        "procedure_occurrence": ("procedure_date", "procedure_date"),
     }
     for table, (start_col, end_col) in events.items():
+        if table not in cdm:
+            continue
         for r in cdm[table].to_pylist():
             pid, s, e = r["person_id"], r[start_col], r[end_col]
             if pid not in known:

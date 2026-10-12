@@ -49,3 +49,32 @@ DEATH = pa.schema([
     ("death_type_concept_id", i64), ("cause_concept_id", i64), ("cause_source_value", s),
     ("cause_source_concept_id", i64),
 ])
+
+CONDITION_OCCURRENCE = pa.schema([
+    ("condition_occurrence_id", i64), ("person_id", i64), ("condition_concept_id", i64),
+    ("condition_start_date", d), ("condition_start_datetime", ts), ("condition_end_date", d),
+    ("condition_end_datetime", ts), ("condition_type_concept_id", i64),
+    ("condition_status_concept_id", i64), ("stop_reason", s), ("provider_id", i64),
+    ("visit_occurrence_id", i64), ("visit_detail_id", i64), ("condition_source_value", s),
+    ("condition_source_concept_id", i64), ("condition_status_source_value", s),
+])
+
+DRUG_EXPOSURE = pa.schema([
+    ("drug_exposure_id", i64), ("person_id", i64), ("drug_concept_id", i64),
+    ("drug_exposure_start_date", d), ("drug_exposure_start_datetime", ts),
+    ("drug_exposure_end_date", d), ("drug_exposure_end_datetime", ts),
+    ("verbatim_end_date", d), ("drug_type_concept_id", i64), ("stop_reason", s),
+    ("refills", i64), ("quantity", pa.float64()), ("days_supply", i64), ("sig", s),
+    ("route_concept_id", i64), ("lot_number", s), ("provider_id", i64),
+    ("visit_occurrence_id", i64), ("visit_detail_id", i64), ("drug_source_value", s),
+    ("drug_source_concept_id", i64), ("route_source_value", s), ("dose_unit_source_value", s),
+])
+
+PROCEDURE_OCCURRENCE = pa.schema([
+    ("procedure_occurrence_id", i64), ("person_id", i64), ("procedure_concept_id", i64),
+    ("procedure_date", d), ("procedure_datetime", ts), ("procedure_end_date", d),
+    ("procedure_end_datetime", ts), ("procedure_type_concept_id", i64),
+    ("modifier_concept_id", i64), ("quantity", i64), ("provider_id", i64),
+    ("visit_occurrence_id", i64), ("visit_detail_id", i64), ("procedure_source_value", s),
+    ("procedure_source_concept_id", i64), ("modifier_source_value", s),
+])

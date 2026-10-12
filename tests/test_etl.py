@@ -85,3 +85,54 @@ def test_synthetic_is_reproducible(tmp_path: Path) -> None:
     c = generate(tmp_path / "c", 50, seed=2)
     assert a.sha256 == b.sha256
     assert a.sha256 != c.sha256
+
+
+def test_conditions(tmp_path: Path) -> None:
+    from jpomop.vocab import Vocab
+
+    y1 = basic_form()
+    # same ICD-10 as the main diagnosis, in a lower-priority field
+    y1.append(y1_line("A006050", {2: "J189", 4: "4860021", 9: "肺炎"}, seq="1"))
+    vocab = Vocab(icd10={"J18.9": (900000001, 900000101)})
+    forms_t = pivot_yoshiki1(read_yoshiki1(write(tmp_path / "y1.txt", y1)).table)
+    cdm, report = build_cdm(forms_t.forms, read_ef(write(tmp_path / "ef.txt", [ef_line()])).table,
+                            forms_t.diagnoses, vocab)
+    rows = cdm["condition_occurrence"].to_pylist()
+    assert sorted(r["condition_source_value"] for r in rows) == ["E119", "I10", "J189"]
+    j18 = next(r for r in rows if r["condition_source_value"] == "J189")
+    assert j18["condition_concept_id"] == 900000101
+    assert j18["condition_status_source_value"] == "dx_main"
+    assert j18["condition_start_date"] == date(2026, 6, 10)
+    assert report.skipped_rows["condition_occurrence"] == {"duplicate_in_stay": 1}
+    assert report.invariant_problems == []
+
+
+def test_suspected_diagnosis_is_left_out(tmp_path: Path) -> None:
+    forms_t = pivot_yoshiki1(read_yoshiki1(write(tmp_path / "y1.txt",
+                                                 basic_form(dx_modifiers=("8002",)))).table)
+    cdm, report = build_cdm(forms_t.forms, read_ef(write(tmp_path / "ef.txt", [ef_line()])).table,
+                            forms_t.diagnoses)
+    sources = [r["condition_source_value"] for r in cdm["condition_occurrence"].to_pylist()]
+    assert "J189" not in sources
+    assert report.skipped_rows["condition_occurrence"]["suspected"] == 1
+
+
+def test_drugs_and_procedures(tmp_path: Path) -> None:
+    ef = [
+        ef_line(),                                                 # drug
+        ef_line(c17="001000000000"),                              # brought from home
+        ef_line(c17="100000000000", c24="20260615"),              # discharge prescription
+        ef_line(c5="50", c9="150000001", c10="K9999", c21="1"),   # surgery
+        ef_line(c5="90", c9="190000001"),                         # room charge, not a procedure
+    ]
+    cdm, report = cdm_from(tmp_path, basic_form(), ef)
+    drugs = cdm["drug_exposure"].to_pylist()
+    assert len(drugs) == 2
+    assert drugs[0]["drug_source_value"] == "620000001"
+    assert drugs[0]["quantity"] == 2.0
+    assert drugs[1]["stop_reason"] == "discharge_prescription"
+    assert report.skipped_rows["drug_exposure"] == {"brought_from_home": 1}
+    procs = cdm["procedure_occurrence"].to_pylist()
+    assert [(p["procedure_source_value"], p["modifier_source_value"]) for p in procs] == [
+        ("150000001", "K9999")]
+    assert report.invariant_problems == []
