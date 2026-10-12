@@ -1,0 +1,50 @@
+# Inpatient EF integrated file (入院EF統合ファイル), FY2026 DPC survey.
+# Field list: p207. Field definitions: p190-196. File format: p189.
+# The specification has no explicit type column; `type` is inferred from
+# lengths and examples and marked `type_inferred: true`.
+spec_id: dpc_ef
+source:
+  title: "DPCの評価・検証等に係る調査（退院患者調査）実施説明資料"
+  fiscal_year: 2026
+  edition: "2026-07-17"
+  url: "https://www.mhlw.go.jp/content/12400000/001738680.pdf"
+  retrieved: "2026-10-12"
+  sha256: "f1a099cb57c14251497863cc1fb46c9186c7febd3a7160dca73f9639383b1ed1"
+file:
+  encoding: cp932        # p189: シフトJIS, no gaiji
+  delimiter: "\t"        # p189: tab-separated text
+  header: false
+  n_fields: 31
+type_inferred: true
+fields:
+  - {col: 1,  name: facility_code,   name_ja: 施設コード,                     length: 9,   type: digits,  required: always, zero_pad: true, page: 207}
+  - {col: 2,  name: data_id,         name_ja: データ識別番号,                 length: 10,  type: digits,  required: always, zero_pad: true, page: 207}
+  - {col: 3,  name: discharge_date,  name_ja: 退院年月日,                     length: 8,   type: date8_or_zero, required: always, page: 191}
+  - {col: 4,  name: admission_date,  name_ja: 入院年月日,                     length: 8,   type: date8,   required: always, page: 191}
+  - {col: 5,  name: data_kubun,      name_ja: データ区分,                     length: 2,   type: code,    required: always, codes: ef_data_kubun, page: 207}
+  - {col: 6,  name: order_no,        name_ja: 順序番号,                       length: 4,   type: digits,  required: always, page: 191}
+  - {col: 7,  name: detail_no,       name_ja: 行為明細番号,                   length: 3,   type: digits,  required: always, page: 192}
+  - {col: 8,  name: hospital_code,   name_ja: 病院点数マスタコード,           length: 12,  type: string,  required: always, page: 207}
+  - {col: 9,  name: receipt_code,    name_ja: レセプト電算処理システム用コード, length: 9, type: digits,  required: always, page: 192}
+  - {col: 10, name: kaishaku_no,     name_ja: 解釈番号,                       length: 8,   type: string,  required: never,  page: 192}
+  - {col: 11, name: item_name,       name_ja: 診療明細名称,                   length: 254, type: string,  required: always, page: 192}
+  - {col: 12, name: quantity,        name_ja: 使用量,                         length: 11,  type: decimal, required: always, page: 193}
+  - {col: 13, name: unit_code,       name_ja: 基準単位,                       length: 3,   type: string,  required: always, page: 193}
+  - {col: 14, name: detail_points,   name_ja: 明細点数・金額,                 length: 12,  type: decimal, required: always, page: 192}
+  - {col: 15, name: yen_point,       name_ja: 円・点区分,                     length: 1,   type: code,    required: always, codes: ef_yen_point, page: 192}
+  - {col: 16, name: ffs_points,      name_ja: 出来高実績点数,                 length: 8,   type: decimal, required: always, page: 194}
+  - {col: 17, name: detail_flags,    name_ja: 行為明細区分情報,               length: 12,  type: digits,  required: always, page: 195}
+  - {col: 18, name: act_points,      name_ja: 行為点数,                       length: 8,   type: decimal, required: always, page: 192}
+  - {col: 19, name: act_drug_yen,    name_ja: 行為薬剤料,                     length: 8,   type: decimal, required: always, page: 207}
+  - {col: 20, name: act_material_yen, name_ja: 行為材料料,                    length: 8,   type: decimal, required: always, page: 207}
+  - {col: 21, name: act_count,       name_ja: 行為回数,                       length: 3,   type: integer, required: always, page: 193}
+  - {col: 22, name: insurer_no,      name_ja: 保険者番号,                     length: 8,   type: string,  required: always, drop: true, page: 193}
+  - {col: 23, name: receipt_type,    name_ja: レセプト種別コード,             length: 4,   type: string,  required: ffs_only, page: 193}
+  - {col: 24, name: exec_date,       name_ja: 実施年月日,                     length: 8,   type: date8,   required: always, page: 207}
+  - {col: 25, name: dept_receipt,    name_ja: レセプト科区分,                 length: 2,   type: string,  required: always, page: 193}
+  - {col: 26, name: dept,            name_ja: 診療科区分,                     length: 3,   type: string,  required: always, page: 193}
+  - {col: 27, name: doctor_code,     name_ja: 医師コード,                     length: 10,  type: string,  required: ffs_only, drop: true, page: 193}
+  - {col: 28, name: ward_code,       name_ja: 病棟コード,                     length: 10,  type: string,  required: always, page: 207}
+  - {col: 29, name: ward_type,       name_ja: 病棟区分,                       length: 1,   type: string,  required: always, page: 194}
+  - {col: 30, name: in_out,          name_ja: 入外区分,                       length: 1,   type: code,    required: always, codes: ef_in_out, page: 194}
+  - {col: 31, name: facility_type,   name_ja: 施設タイプ,                     length: 3,   type: string,  required: always, page: 194}

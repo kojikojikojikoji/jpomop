@@ -1,0 +1,93 @@
+# Form 1 (様式1), FY2026 DPC survey.
+# Record layout: p21-22. Payload items: p23-36. Coding guidance: p41 onwards.
+# One record = 5 header fields + code, version, sequence + payloads 1-9 (17 fields).
+spec_id: dpc_yoshiki1
+source:
+  title: "DPCの評価・検証等に係る調査（退院患者調査）実施説明資料"
+  fiscal_year: 2026
+  edition: "2026-07-17"
+  url: "https://www.mhlw.go.jp/content/12400000/001738680.pdf"
+  retrieved: "2026-10-12"
+  sha256: "f1a099cb57c14251497863cc1fb46c9186c7febd3a7160dca73f9639383b1ed1"
+file:
+  encoding: cp932
+  delimiter: "\t"        # p21: tab-separated text
+  header: false
+  n_fields: 17
+fields:
+  - {col: 1,  name: facility_code,  name_ja: 施設コード,         length: 9,  type: digits, required: always, zero_pad: true, page: 22}
+  - {col: 2,  name: data_id,        name_ja: データ識別番号,     length: 10, type: digits, required: always, zero_pad: true, page: 22}
+  - {col: 3,  name: admission_date, name_ja: 入院年月日,         length: 8,  type: date8,  required: always, page: 22}
+  - {col: 4,  name: stay_no,        name_ja: 回数管理番号,       type: string, required: always, page: 22}
+  - {col: 5,  name: summary_no,     name_ja: 統括診療情報番号,   type: string, required: always, page: 22}
+  - {col: 6,  name: code,           name_ja: コード,             length: 7,  type: string, required: always, page: 22}
+  - {col: 7,  name: version,        name_ja: バージョン,         length: 8,  type: date8,  required: always, page: 22}
+  - {col: 8,  name: seq,            name_ja: 連番,               type: integer, required: always, page: 22}
+  - {col: 9,  name: payload1,       name_ja: ペイロード1,        type: string, required: never, page: 22}
+  - {col: 10, name: payload2,       name_ja: ペイロード2,        type: string, required: never, page: 22}
+  - {col: 11, name: payload3,       name_ja: ペイロード3,        type: string, required: never, page: 22}
+  - {col: 12, name: payload4,       name_ja: ペイロード4,        type: string, required: never, page: 22}
+  - {col: 13, name: payload5,       name_ja: ペイロード5,        type: string, required: never, page: 22}
+  - {col: 14, name: payload6,       name_ja: ペイロード6,        type: string, required: never, page: 22}
+  - {col: 15, name: payload7,       name_ja: ペイロード7,        type: string, required: never, page: 22}
+  - {col: 16, name: payload8,       name_ja: ペイロード8,        type: string, required: never, page: 22}
+  - {col: 17, name: payload9,       name_ja: ペイロード9,        type: string, required: never, page: 22}
+# Payload codes read by jpomop v0.1. Other codes are counted but not validated.
+# `repeat: true` means several records with seq 1, 2, ... are allowed.
+payloads:
+  A000010:
+    name: patient
+    page: 23
+    items:
+      1: {name: birth_date, type: date8_partial, required: true}   # unknown parts are 0 (p44)
+      2: {name: sex, type: code, codes: y1_sex, required: true}
+      3: {name: postcode, type: digits, length: 7, required: true, drop: true}
+  A000020:
+    name: admission
+    page: 23
+    items:
+      1: {name: admission_date, type: date8, required: true}
+      2: {name: admission_route, type: code, codes: y1_admission_route, required: true}
+      5: {name: admission_type, type: string}
+      6: {name: ambulance, type: string}
+  A000030:
+    name: discharge
+    page: 24
+    items:
+      1: {name: discharge_date, type: date8, required: true}
+      2: {name: discharge_to, type: code, codes: y1_discharge_to, required: true}
+      3: {name: discharge_outcome, type: code, codes: y1_discharge_outcome, required: true}
+      4: {name: death_within_24h, type: code, codes: y1_death_24h, required: true}
+  A000031:
+    name: period
+    page: 24
+    items:
+      1: {name: period_start, type: date8, required: true}
+      2: {name: period_end, type: date8, required: true}
+  A006010: {name: dx_main,         page: 28, item_set: diagnosis}
+  A006020: {name: dx_trigger,      page: 28, item_set: diagnosis}
+  A006030: {name: dx_resource1,    page: 29, item_set: diagnosis}
+  A006031: {name: dx_resource2,    page: 29, item_set: diagnosis}
+  A006040: {name: dx_comorbid,     page: 30, item_set: diagnosis, repeat: true}
+  A006050: {name: dx_complication, page: 30, item_set: diagnosis, repeat: true}
+  A007010:
+    name: surgery
+    page: 30
+    repeat: true
+    items:
+      1: {name: surgery_date, type: date8, required: true}
+      2: {name: surgery_code, type: string, required: true}   # 点数表コード, e.g. K0821ｲ
+      9: {name: surgery_name, type: string}
+item_sets:
+  diagnosis:
+    1: {name: unused}
+    2: {name: icd10, type: string, required: true}
+    3: {name: disease_add_code, type: string}                # A006030 only (p29)
+    4: {name: disease_code, type: digits, length: 7, required: true}
+    5: {name: modifier1, type: string}
+    6: {name: modifier2, type: string}
+    7: {name: modifier3, type: string}
+    8: {name: modifier4, type: string}
+    9: {name: disease_name, type: string, required: true}
+# Modifier code for "suspected" (の疑い), p79.
+suspected_modifier: "8002"
