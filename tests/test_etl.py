@@ -156,3 +156,40 @@ def test_drugs_and_procedures(tmp_path: Path) -> None:
         ("150000001", "K9999")
     ]
     assert report.invariant_problems == []
+
+
+def test_interim_form_used_only_without_whole_stay_form(tmp_path: Path) -> None:
+    # patient 1: interim form only (still in hospital); patient 2: both
+    def interim(patient: str) -> list[str]:
+        return [
+            y1_line("A000010", {1: "19500102", 2: "1", 3: "1000001"}, summary="Z", patient=patient),
+            y1_line("A000030", {2: "b", 3: "9", 4: "0"}, summary="Z", patient=patient),
+        ]
+
+    y1 = interim("0000000001") + interim("0000000002") + basic_form("0000000002")
+    ef = [ef_line(c3="00000000", c24="20260620"), ef_line(c2="0000000002")]
+    cdm, report = cdm_from(tmp_path, y1, ef)
+    visits = {v["person_id"]: v for v in cdm["visit_occurrence"].to_pylist()}
+    assert len(visits) == 2
+    assert visits[1]["visit_end_date"] == date(2026, 6, 20)  # last date of service
+    assert visits[2]["visit_end_date"] == date(2026, 6, 15)
+    assert report.skipped_forms == {"interim_form_used": 1, "summary_no=Z": 1}
+    assert report.invariant_problems == []
+
+
+def test_same_day_stays_become_one_visit(tmp_path: Path) -> None:
+    def day_stay(stay_no: str) -> list[str]:
+        return [
+            line.replace("\t20260610\t0\t0\t", f"\t20260610\t{stay_no}\t0\t", 1)
+            for line in [
+                y1_line("A000010", {1: "19500102", 2: "2", 3: "1000001"}),
+                y1_line("A000030", {1: "20260610", 2: "1", 3: "1", 4: "0"}),
+            ]
+        ]
+
+    cdm, report = cdm_from(
+        tmp_path, day_stay("1") + day_stay("2"), [ef_line(c3="20260610", c24="20260610")]
+    )
+    assert cdm["visit_occurrence"].num_rows == 1
+    assert report.skipped_forms == {"same_day_stays_merged": 1}
+    assert report.invariant_problems == []

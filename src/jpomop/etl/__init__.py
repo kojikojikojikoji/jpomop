@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections import Counter
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
@@ -17,6 +16,7 @@ from jpomop.etl.build import (
     build_person,
     build_visit_detail,
     build_visit_occurrence,
+    last_service_dates,
     person_ids,
     visit_ids,
     whole_stay_forms,
@@ -55,9 +55,9 @@ def build_cdm(
     forms: pa.Table, ef: pa.Table, diagnoses: pa.Table | None = None, vocab: Vocab | None = None
 ) -> tuple[dict[str, pa.Table], EtlReport]:
     vocab = vocab or Vocab()
-    whole = whole_stay_forms(forms)
+    whole, skipped = whole_stay_forms(forms)
     pids, vids = person_ids(whole), visit_ids(whole)
-    visits = build_visit_occurrence(whole, pids, vids)
+    visits = build_visit_occurrence(whole, pids, vids, last_service_dates(ef))
     cdm = {
         "person": build_person(whole, pids),
         "observation_period": build_observation_period(visits),
@@ -74,7 +74,6 @@ def build_cdm(
     cdm["drug_exposure"], skip = build_drug_exposure(ef, visits, vids, vocab)
     skipped_rows["drug_exposure"] = dict(skip)
     cdm["procedure_occurrence"] = build_procedure_occurrence(ef, visits, vids)
-    skipped = Counter(f"summary_no={s}" for s in forms.column("summary_no").to_pylist() if s != "0")
     report = EtlReport(
         rows={k: t.num_rows for k, t in cdm.items()},
         skipped_forms=dict(skipped),

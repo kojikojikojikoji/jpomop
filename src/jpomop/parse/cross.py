@@ -12,14 +12,21 @@ from jpomop.parse.fields import Violation
 def check_cross_file(
     ef: pa.Table, forms: pa.Table, ef_file: str = "", y1_file: str = ""
 ) -> list[Violation]:
-    """Compare stays in the EF file with whole-stay forms (統括診療情報番号 0).
+    """Compare stays in the EF file with whole-stay forms (統括診療情報番号 0, or Z
+    when there is no 0 yet).
 
     A stay is (facility_code, data_id, admission_date).
     """
     parents: dict[tuple[Any, ...], dict[str, Any]] = {}
+    interim: dict[tuple[Any, ...], dict[str, Any]] = {}
     for f in forms.to_pylist():
+        stay = (f["facility_code"], f["data_id"], f["admission_date"])
         if f["summary_no"] == "0":
-            parents[(f["facility_code"], f["data_id"], f["admission_date"])] = f
+            parents[stay] = f
+        elif f["summary_no"] == "Z":
+            interim[stay] = f
+    for stay, f in interim.items():  # still in hospital: only the day-90 form exists
+        parents.setdefault(stay, f)
 
     out: list[Violation] = []
     ef_stays: set[tuple[Any, ...]] = set()

@@ -12,7 +12,7 @@ counted by `run_etl` but not converted yet; see docs/adr.
 from __future__ import annotations
 
 import hashlib
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import date
 from typing import Any
 
@@ -31,9 +31,39 @@ def source_value(facility_code: str, data_id: str) -> str:
     return hashlib.sha256(f"{facility_code}:{data_id}".encode()).hexdigest()[:16]
 
 
-def whole_stay_forms(forms: pa.Table) -> list[dict[str, Any]]:
-    rows = [f for f in forms.to_pylist() if f["summary_no"] == "0"]
-    return sorted(rows, key=lambda f: (f["facility_code"], f["data_id"], f["admission_date"]))
+def whole_stay_forms(forms: pa.Table) -> tuple[list[dict[str, Any]], Counter[str]]:
+    """Pick one form per stay and count what was not used.
+
+    - Whole-stay forms (統括診療情報番号 0) are used.
+    - A day-90 interim form (Z) is used only when the stay has no whole-stay
+      form yet, i.e. the patient was still in hospital when the data was cut.
+      The ward-group forms (1, 2, ...) and the aggregated short-readmission
+      forms (A, B) repeat information already in the whole-stay forms and are
+      not used (p42).
+    - Several one-day stays on the same day (回数管理番号 1, 2, ...) cannot be
+      told apart in the EF file, so they become one visit.
+    """
+    counts: Counter[str] = Counter()
+    by_stay: dict[Stay, dict[str, Any]] = {}
+    interim: dict[Stay, dict[str, Any]] = {}
+    for f in forms.to_pylist():
+        stay = (f["facility_code"], f["data_id"], f["admission_date"])
+        if f["summary_no"] == "0":
+            if stay in by_stay:
+                counts["same_day_stays_merged"] += 1
+                continue
+            by_stay[stay] = f
+        elif f["summary_no"] == "Z":
+            interim.setdefault(stay, f)
+        else:
+            counts[f"summary_no={f['summary_no']}"] += 1
+    for stay, f in interim.items():
+        if stay in by_stay:
+            counts["summary_no=Z"] += 1
+        else:
+            by_stay[stay] = f
+            counts["interim_form_used"] += 1
+    return [by_stay[k] for k in sorted(by_stay)], counts
 
 
 def person_ids(forms: list[dict[str, Any]]) -> dict[Patient, int]:
@@ -70,19 +100,37 @@ def build_person(forms: list[dict[str, Any]], pids: dict[Patient, int]) -> pa.Ta
     return pa.Table.from_pylist(rows, schema=S.PERSON)
 
 
+def last_service_dates(ef: pa.Table) -> dict[Stay, date]:
+    last: dict[Stay, date] = {}
+    for r in ef.select(["facility_code", "data_id", "admission_date", "exec_date"]).to_pylist():
+        if r["exec_date"] is None:
+            continue
+        stay = (r["facility_code"], r["data_id"], r["admission_date"])
+        last[stay] = max(last.get(stay, r["exec_date"]), r["exec_date"])
+    return last
+
+
 def build_visit_occurrence(
-    forms: list[dict[str, Any]], pids: dict[Patient, int], vids: dict[Stay, int]
+    forms: list[dict[str, Any]],
+    pids: dict[Patient, int],
+    vids: dict[Stay, int],
+    last_service: dict[Stay, date] | None = None,
 ) -> pa.Table:
+    """Visit end is the discharge date. A stay with no discharge date yet (an
+    interim form) ends on its last date of service in the EF file, or on the
+    admission date if there is none."""
+    last_service = last_service or {}
     rows = []
     for f in forms:
         stay = (f["facility_code"], f["data_id"], f["admission_date"])
+        end = f["discharge_date"] or last_service.get(stay) or f["admission_date"]
         rows.append(
             {
                 "visit_occurrence_id": vids[stay],
                 "person_id": pids[stay[:2]],
                 "visit_concept_id": C.INPATIENT_VISIT,
                 "visit_start_date": f["admission_date"],
-                "visit_end_date": f["discharge_date"] or f["admission_date"],
+                "visit_end_date": end,
                 "visit_type_concept_id": C.TYPE_CLAIM,
                 "visit_source_value": "dpc_yoshiki1",
                 "visit_source_concept_id": C.UNKNOWN,
