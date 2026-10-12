@@ -20,6 +20,13 @@ The PDF itself is not committed.
 
 The site terms (https://www.hpdx.or.jp/riyo.html) prohibit reproduction without permission, so the masters are never committed. Users download them and build the vocabulary locally.
 
-## Third-party mapping tables
+Drug master layout: receipt code in field 3 and NHI price listing code (薬価基準収載医薬品コード) in field 32, checked against `y_ALL20261001.csv` (42 fields per row).
 
-To be listed here when first used, with licence and version.
+## Third-party mapping tables (not redistributed)
+
+| Table | Licence | Where | Used for |
+|---|---|---|---|
+| Kimura E. et al. A dataset for mapping the Japanese drugs to RxNorm standard concepts. Data in Brief, 2025. doi:10.1016/j.dib.2025.111418 | CC BY 4.0 | https://doi.org/10.17632/y3756v8237.1 | NHI price listing code (`NHIDPLC`) to OMOP concept (`OSV_ID`) |
+| OMOP Standardized Vocabularies (ICD10, SNOMED, RxNorm, RxNorm Extension) | per vocabulary, see Athena | https://athena.ohdsi.org | ICD-10 to SNOMED (`Maps to`) |
+
+Users download both themselves; `jpomop vocab build` joins them locally.

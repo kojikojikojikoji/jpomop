@@ -87,18 +87,46 @@ def synth(n_patients: int, seed: int, out: Path) -> None:
               help="DuckDB file, or a directory with --format parquet.")
 @click.option("--format", "fmt", type=click.Choice(["duckdb", "parquet"]), default="duckdb",
               show_default=True)
-def convert(y1_paths: tuple[Path, ...], ef_paths: tuple[Path, ...], out: Path, fmt: str) -> None:
+@click.option("--vocab", "vocab_path", type=_existing,
+              help="vocab.duckdb from `jpomop vocab build`. Without it, concept IDs are 0.")
+def convert(y1_paths: tuple[Path, ...], ef_paths: tuple[Path, ...], out: Path, fmt: str,
+            vocab_path: Path | None) -> None:
     """Convert DPC files to OMOP CDM v5.4 tables."""
     from jpomop.etl import run_etl
 
-    report = run_etl(list(y1_paths), list(ef_paths), out, fmt)  # type: ignore[arg-type]
+    report = run_etl(list(y1_paths), list(ef_paths), out, fmt,  # type: ignore[arg-type]
+                     vocab=vocab_path)
     for name, n in report.rows.items():
         click.echo(f"{name}\t{n}")
     for kind, n in sorted(report.skipped_forms.items()):
         click.echo(f"skipped forms {kind}\t{n}")
+    for table, reasons in report.skipped_rows.items():
+        for reason, n in sorted(reasons.items()):
+            click.echo(f"left out of {table}: {reason}\t{n}")
     if report.n_violations:
         click.echo(f"input violations\t{report.n_violations} (run jpomop validate for details)")
     for p in report.invariant_problems:
         click.echo(f"INVARIANT\t{p}", err=True)
     if report.invariant_problems:
         raise SystemExit(2)
+
+
+@main.group()
+def vocab() -> None:
+    """Build the local vocabulary from files you download yourself."""
+
+
+@vocab.command("build")
+@click.option("--athena", type=click.Path(exists=True, file_okay=False, path_type=Path),
+              required=True, help="Folder with CONCEPT.csv and CONCEPT_RELATIONSHIP.csv.")
+@click.option("--drug-master", type=_existing, multiple=True, required=True,
+              help="医薬品マスター y_*.csv (repeat for several files).")
+@click.option("--kimura", type=_existing, help="Kimura et al. 2025 mapping (.xlsx or .csv).")
+@click.option("--out", type=click.Path(dir_okay=False, path_type=Path), required=True)
+def vocab_build(athena: Path, drug_master: tuple[Path, ...], kimura: Path | None,
+                out: Path) -> None:
+    from jpomop.vocab import build_vocab
+
+    r = build_vocab(athena, list(drug_master), kimura, out)
+    click.echo(f"ICD-10 codes\t{r.icd10_codes} ({r.icd10_mapped} map to a standard concept)")
+    click.echo(f"drug receipt codes\t{r.receipt_drugs} ({r.receipt_drugs_mapped} mapped)")
