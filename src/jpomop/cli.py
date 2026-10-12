@@ -65,3 +65,40 @@ def validate(y1_paths: tuple[Path, ...], ef_paths: tuple[Path, ...], out: Path |
         click.echo(f"wrote {len(violations)} rows to {out}")
     if violations:
         raise SystemExit(1)
+
+
+@main.command()
+@click.option("--n", "n_patients", default=100, show_default=True, help="Number of patients.")
+@click.option("--seed", default=20261012, show_default=True)
+@click.option("--out", type=click.Path(file_okay=False, path_type=Path), required=True)
+def synth(n_patients: int, seed: int, out: Path) -> None:
+    """Write a synthetic Form 1 and EF file (June 2026). Everything is invented."""
+    from jpomop.synth import generate
+
+    m = generate(out, n_patients, seed=seed)
+    click.echo(f"{m.n_patients} patients, {m.n_stays} stays")
+    click.echo(f"{m.yoshiki1}\n{m.ef}")
+
+
+@main.command()
+@click.option("--yoshiki1", "y1_paths", type=_existing, multiple=True, required=True)
+@click.option("--ef", "ef_paths", type=_existing, multiple=True, required=True)
+@click.option("--out", type=click.Path(path_type=Path), required=True,
+              help="DuckDB file, or a directory with --format parquet.")
+@click.option("--format", "fmt", type=click.Choice(["duckdb", "parquet"]), default="duckdb",
+              show_default=True)
+def convert(y1_paths: tuple[Path, ...], ef_paths: tuple[Path, ...], out: Path, fmt: str) -> None:
+    """Convert DPC files to OMOP CDM v5.4 tables."""
+    from jpomop.etl import run_etl
+
+    report = run_etl(list(y1_paths), list(ef_paths), out, fmt)  # type: ignore[arg-type]
+    for name, n in report.rows.items():
+        click.echo(f"{name}\t{n}")
+    for kind, n in sorted(report.skipped_forms.items()):
+        click.echo(f"skipped forms {kind}\t{n}")
+    if report.n_violations:
+        click.echo(f"input violations\t{report.n_violations} (run jpomop validate for details)")
+    for p in report.invariant_problems:
+        click.echo(f"INVARIANT\t{p}", err=True)
+    if report.invariant_problems:
+        raise SystemExit(2)

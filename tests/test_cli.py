@@ -29,3 +29,15 @@ def test_validate_reports_and_fails(tmp_path) -> None:  # type: ignore[no-untype
     assert result.exit_code == 1
     assert "date_invalid\t1" in result.output
     assert out.read_text(encoding="utf-8").count("\n") == 2
+
+
+def test_synth_then_convert(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    runner = CliRunner()
+    r = runner.invoke(main, ["synth", "--n", "20", "--out", str(tmp_path / "s")])
+    assert r.exit_code == 0, r.output
+    r = runner.invoke(main, ["convert", "--yoshiki1", str(tmp_path / "s" / "yoshiki1.txt"),
+                             "--ef", str(tmp_path / "s" / "ef.txt"),
+                             "--out", str(tmp_path / "cdm"), "--format", "parquet"])
+    assert r.exit_code == 0, r.output
+    assert "person\t20" in r.output
+    assert (tmp_path / "cdm" / "visit_detail.parquet").exists()
