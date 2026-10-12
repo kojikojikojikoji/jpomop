@@ -130,3 +130,17 @@ def vocab_build(athena: Path, drug_master: tuple[Path, ...], kimura: Path | None
     r = build_vocab(athena, list(drug_master), kimura, out)
     click.echo(f"ICD-10 codes\t{r.icd10_codes} ({r.icd10_mapped} map to a standard concept)")
     click.echo(f"drug receipt codes\t{r.receipt_drugs} ({r.receipt_drugs_mapped} mapped)")
+
+
+@main.command()
+@click.option("--cdm", type=_existing, required=True, help="DuckDB file from jpomop convert.")
+@click.option("--top", default=10, show_default=True, help="Unmapped source codes to list.")
+def report(cdm: Path, top: int) -> None:
+    """Show how much of each domain maps to standard concepts."""
+    from jpomop.report import coverage
+
+    for c in coverage(cdm, top):
+        click.echo(f"{c.table}\trows {c.mapped_rows}/{c.rows} ({c.row_rate:.1%})\t"
+                   f"codes {c.mapped_codes}/{c.codes} ({c.code_rate:.1%})")
+        for code, n in c.top_unmapped:
+            click.echo(f"  unmapped {code}\t{n}")
