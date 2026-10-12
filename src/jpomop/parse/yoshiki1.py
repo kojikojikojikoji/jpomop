@@ -32,24 +32,42 @@ def read_yoshiki1(path: Path, spec: Spec | None = None) -> ParseResult:
     for lineno, raw in iter_records(path, spec.encoding, spec.delimiter):
         if len(raw) != spec.n_fields:
             violations.append(
-                Violation(path.name, lineno, "*", str(len(raw)), "n_fields",
-                          f"expected {spec.n_fields} fields")
+                Violation(
+                    path.name,
+                    lineno,
+                    "*",
+                    str(len(raw)),
+                    "n_fields",
+                    f"expected {spec.n_fields} fields",
+                )
             )
             continue
         row_ok = True
         for f in spec.fields:
             value = raw[f.col - 1]
             if REPLACEMENT in value:
-                violations.append(Violation(path.name, lineno, f.name, value, "encoding",
-                                            "contains bytes that are not CP932"))
+                violations.append(
+                    Violation(
+                        path.name,
+                        lineno,
+                        f.name,
+                        value,
+                        "encoding",
+                        "contains bytes that are not CP932",
+                    )
+                )
             if value == "":
                 if f.required == "always":
-                    violations.append(Violation(path.name, lineno, f.name, value, "required",
-                                                "required field is empty"))
+                    violations.append(
+                        Violation(
+                            path.name, lineno, f.name, value, "required", "required field is empty"
+                        )
+                    )
                     row_ok = False
                 continue
-            problem = check_value(value, type_=f.type, length=f.length,
-                                  zero_pad=f.zero_pad, codes=None)
+            problem = check_value(
+                value, type_=f.type, length=f.length, zero_pad=f.zero_pad, codes=None
+            )
             if problem:
                 violations.append(Violation(path.name, lineno, f.name, value, *problem))
                 row_ok = False
@@ -66,8 +84,14 @@ def read_yoshiki1(path: Path, spec: Spec | None = None) -> ParseResult:
     schema = pa.schema(
         [("_file", pa.string()), ("_line", pa.int64())]
         + [
-            (f.name, pa.date32() if f.name == "admission_date"
-             else pa.int64() if f.name == "seq" else pa.string())
+            (
+                f.name,
+                pa.date32()
+                if f.name == "admission_date"
+                else pa.int64()
+                if f.name == "seq"
+                else pa.string(),
+            )
             for f in spec.fields
         ]
     )
@@ -104,8 +128,16 @@ def _check_items(
         where = f"{code}.{no}:{d['name']}"
         if value is None:
             if d.get("required"):
-                problems.append(Violation(rec["_file"], rec["_line"], where, "", "required",
-                                          "required payload is empty"))
+                problems.append(
+                    Violation(
+                        rec["_file"],
+                        rec["_line"],
+                        where,
+                        "",
+                        "required",
+                        "required payload is empty",
+                    )
+                )
             continue
         problem = check_value(
             value,
@@ -164,8 +196,16 @@ def pivot_yoshiki1(long: pa.Table, spec: Spec | None = None) -> Yoshiki1Tables:
             payload = spec.payloads[code]
             ident = (code, rec["seq"])
             if ident in seen or (not payload.get("repeat") and rec["seq"] not in (0, 1)):
-                violations.append(Violation(rec["_file"], rec["_line"], code, str(rec["seq"]),
-                                            "duplicate_key", "record repeated within one form"))
+                violations.append(
+                    Violation(
+                        rec["_file"],
+                        rec["_line"],
+                        code,
+                        str(rec["seq"]),
+                        "duplicate_key",
+                        "record repeated within one form",
+                    )
+                )
                 continue
             seen.add(ident)
             values, problems = _check_items(rec, _item_defs(spec, code), code)
@@ -174,22 +214,28 @@ def pivot_yoshiki1(long: pa.Table, spec: Spec | None = None) -> Yoshiki1Tables:
                 mods = [values.get(f"modifier{i}") for i in range(1, 5)]
                 mods_present = [m for m in mods if m]
                 name = values.get("disease_name")
-                diagnoses.append(keyd | {
-                    "role": payload["name"],
-                    "seq": rec["seq"],
-                    "icd10": values.get("icd10"),
-                    "disease_code": values.get("disease_code"),
-                    "modifiers": " ".join(mods_present) or None,
-                    "suspected": suspected in mods_present,
-                    "disease_name": normalize_text(name) if name else None,
-                })
+                diagnoses.append(
+                    keyd
+                    | {
+                        "role": payload["name"],
+                        "seq": rec["seq"],
+                        "icd10": values.get("icd10"),
+                        "disease_code": values.get("disease_code"),
+                        "modifiers": " ".join(mods_present) or None,
+                        "suspected": suspected in mods_present,
+                        "disease_name": normalize_text(name) if name else None,
+                    }
+                )
             elif payload["name"] == "surgery":
-                surgeries.append(keyd | {
-                    "seq": rec["seq"],
-                    "surgery_date": parse_date8(values.get("surgery_date") or ""),
-                    "surgery_code": values.get("surgery_code"),
-                    "surgery_name": values.get("surgery_name"),
-                })
+                surgeries.append(
+                    keyd
+                    | {
+                        "seq": rec["seq"],
+                        "surgery_date": parse_date8(values.get("surgery_date") or ""),
+                        "surgery_code": values.get("surgery_code"),
+                        "surgery_name": values.get("surgery_name"),
+                    }
+                )
             else:
                 for name, value in values.items():
                     if name not in FORM_COLUMNS:
@@ -203,19 +249,39 @@ def pivot_yoshiki1(long: pa.Table, spec: Spec | None = None) -> Yoshiki1Tables:
         for required_code in ("A000010", "A000030"):
             if (required_code, 0) not in seen and (required_code, 1) not in seen:
                 first = recs[0]
-                violations.append(Violation(first["_file"], first["_line"], required_code, "",
-                                            "missing_record", "required record is missing"))
+                violations.append(
+                    Violation(
+                        first["_file"],
+                        first["_line"],
+                        required_code,
+                        "",
+                        "missing_record",
+                        "required record is missing",
+                    )
+                )
         forms.append(form)
 
-    dx_schema = pa.schema(KEY_SCHEMA + [
-        ("role", pa.string()), ("seq", pa.int64()), ("icd10", pa.string()),
-        ("disease_code", pa.string()), ("modifiers", pa.string()),
-        ("suspected", pa.bool_()), ("disease_name", pa.string()),
-    ])
-    op_schema = pa.schema(KEY_SCHEMA + [
-        ("seq", pa.int64()), ("surgery_date", pa.date32()),
-        ("surgery_code", pa.string()), ("surgery_name", pa.string()),
-    ])
+    dx_schema = pa.schema(
+        [
+            *KEY_SCHEMA,
+            ("role", pa.string()),
+            ("seq", pa.int64()),
+            ("icd10", pa.string()),
+            ("disease_code", pa.string()),
+            ("modifiers", pa.string()),
+            ("suspected", pa.bool_()),
+            ("disease_name", pa.string()),
+        ]
+    )
+    op_schema = pa.schema(
+        [
+            *KEY_SCHEMA,
+            ("seq", pa.int64()),
+            ("surgery_date", pa.date32()),
+            ("surgery_code", pa.string()),
+            ("surgery_name", pa.string()),
+        ]
+    )
     form_schema = pa.schema(KEY_SCHEMA + list(FORM_COLUMNS.items()))
     return Yoshiki1Tables(
         forms=pa.Table.from_pylist(forms, schema=form_schema),

@@ -62,12 +62,54 @@ def _y1(pid: str, adm: str, code: str, seq: int, payloads: dict[int, str]) -> st
     return "\t".join([FACILITY, pid, adm, "0", "0", code, "20140401", str(seq), *p])
 
 
-def _ef(pid: str, adm: str, dis: str, kubun: str, order: int, detail: int, code: str,
-        name: str, unit: str, qty: str, exec_date: str, ward: str, kaishaku: str = "") -> str:
-    cols = [FACILITY, pid, dis, adm, kubun, f"{order:04d}", f"{detail:03d}",
-            f"H{code}00", code, kaishaku, name, qty, unit or "000", "100", "0", "100",
-            "000000000000", "100", "0", "0", "1", "06999999", "1110", exec_date, "01",
-            "010", "", ward, "1", "0", "001"]
+def _ef(
+    pid: str,
+    adm: str,
+    dis: str,
+    kubun: str,
+    order: int,
+    detail: int,
+    code: str,
+    name: str,
+    unit: str,
+    qty: str,
+    exec_date: str,
+    ward: str,
+    kaishaku: str = "",
+) -> str:
+    cols = [
+        FACILITY,
+        pid,
+        dis,
+        adm,
+        kubun,
+        f"{order:04d}",
+        f"{detail:03d}",
+        f"H{code}00",
+        code,
+        kaishaku,
+        name,
+        qty,
+        unit or "000",
+        "100",
+        "0",
+        "100",
+        "000000000000",
+        "100",
+        "0",
+        "0",
+        "1",
+        "06999999",
+        "1110",
+        exec_date,
+        "01",
+        "010",
+        "",
+        ward,
+        "1",
+        "0",
+        "001",
+    ]
     return "\t".join(cols)
 
 
@@ -93,12 +135,24 @@ def generate(out_dir: Path, n_patients: int = 100, *, seed: int = 20261012) -> S
             n_stays += 1
             died = rng.random() < 0.04
             route = rng.choice(["1", "1", "1", "4", "5"])
-            y1.append(_y1(pid, adm, "A000010", 0,
-                          {1: birth.strftime("%Y%m%d"), 2: sex, 3: "1000001"}))
+            y1.append(
+                _y1(pid, adm, "A000010", 0, {1: birth.strftime("%Y%m%d"), 2: sex, 3: "1000001"})
+            )
             y1.append(_y1(pid, adm, "A000020", 0, {1: adm, 2: route, 5: "100", 6: "0"}))
-            y1.append(_y1(pid, adm, "A000030", 0, {
-                1: dis, 2: "8" if died else rng.choice(["1", "2", "4"]),
-                3: rng.choice(["6", "7"]) if died else rng.choice(["1", "1", "4"]), 4: "0"}))
+            y1.append(
+                _y1(
+                    pid,
+                    adm,
+                    "A000030",
+                    0,
+                    {
+                        1: dis,
+                        2: "8" if died else rng.choice(["1", "2", "4"]),
+                        3: rng.choice(["6", "7"]) if died else rng.choice(["1", "1", "4"]),
+                        4: "0",
+                    },
+                )
+            )
             icd, dcode, name = rng.choice(DIAGNOSES)
             suspected = rng.random() < 0.1
             main = {2: icd, 4: dcode, 9: name + ("の疑い" if suspected else "")}
@@ -113,8 +167,15 @@ def generate(out_dir: Path, n_patients: int = 100, *, seed: int = 20261012) -> S
             operated = icd in ("K802", "S7200", "C189") and rng.random() < 0.7
             op_day = adm_d + timedelta(days=1)
             if operated:
-                y1.append(_y1(pid, adm, "A007010", 1,
-                              {1: op_day.strftime("%Y%m%d"), 2: SURGERY[3], 9: SURGERY[2]}))
+                y1.append(
+                    _y1(
+                        pid,
+                        adm,
+                        "A007010",
+                        1,
+                        {1: op_day.strftime("%Y%m%d"), 2: SURGERY[3], 9: SURGERY[2]},
+                    )
+                )
 
             move_day = adm_d + timedelta(days=rng.randint(1, 5)) if rng.random() < 0.2 else None
             order = 1
@@ -134,8 +195,9 @@ def generate(out_dir: Path, n_patients: int = 100, *, seed: int = 20261012) -> S
                     order += 1
                 if operated and d == op_day:
                     k, c, n, kai = SURGERY
-                    ef.append(_ef(pid, adm, dis, k, order, 1, c, n, "", "0000000.000", ds,
-                                  ward, kai))
+                    ef.append(
+                        _ef(pid, adm, dis, k, order, 1, c, n, "", "0000000.000", ds, ward, kai)
+                    )
                     order += 1
                 d += timedelta(days=1)
 

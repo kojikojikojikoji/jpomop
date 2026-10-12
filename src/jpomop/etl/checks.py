@@ -19,8 +19,10 @@ def check_invariants(cdm: dict[str, pa.Table]) -> list[str]:
     for r in cdm["observation_period"].to_pylist():
         if r["person_id"] in periods:
             problems.append(f"observation_period: more than one period for {r['person_id']}")
-        periods[r["person_id"]] = (r["observation_period_start_date"],
-                                   r["observation_period_end_date"])
+        periods[r["person_id"]] = (
+            r["observation_period_start_date"],
+            r["observation_period_end_date"],
+        )
 
     events = {
         "visit_occurrence": ("visit_start_date", "visit_end_date"),
@@ -49,7 +51,9 @@ def check_invariants(cdm: dict[str, pa.Table]) -> list[str]:
         v = visits.get(r["visit_occurrence_id"])
         if v is None:
             problems.append(f"visit_detail {r['visit_detail_id']}: unknown visit")
-        elif not (v["visit_start_date"] <= r["visit_detail_start_date"]
-                  and r["visit_detail_end_date"] <= v["visit_end_date"]):
+        elif not (
+            v["visit_start_date"] <= r["visit_detail_start_date"]
+            and r["visit_detail_end_date"] <= v["visit_end_date"]
+        ):
             problems.append(f"visit_detail {r['visit_detail_id']}: outside its visit")
     return problems

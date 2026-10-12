@@ -8,11 +8,37 @@ FACILITY = "131234567"
 PATIENT = "0000000001"
 
 EF_DEFAULTS = {
-    1: FACILITY, 2: PATIENT, 3: "20260615", 4: "20260610", 5: "21", 6: "0001", 7: "001",
-    8: "H00000000001", 9: "620000001", 10: "", 11: "架空錠１０ｍｇ", 12: "0000002.000",
-    13: "009", 14: "12.5", 15: "1", 16: "25", 17: "000000000000", 18: "0", 19: "25",
-    20: "0", 21: "1", 22: "06130012", 23: "1110", 24: "20260611", 25: "01", 26: "010",
-    27: "D000000001", 28: "W1", 29: "1", 30: "0", 31: "001",
+    1: FACILITY,
+    2: PATIENT,
+    3: "20260615",
+    4: "20260610",
+    5: "21",
+    6: "0001",
+    7: "001",
+    8: "H00000000001",
+    9: "620000001",
+    10: "",
+    11: "架空錠１０ｍｇ",
+    12: "0000002.000",
+    13: "009",
+    14: "12.5",
+    15: "1",
+    16: "25",
+    17: "000000000000",
+    18: "0",
+    19: "25",
+    20: "0",
+    21: "1",
+    22: "06130012",
+    23: "1110",
+    24: "20260611",
+    25: "01",
+    26: "010",
+    27: "D000000001",
+    28: "W1",
+    29: "1",
+    30: "0",
+    31: "001",
 }
 
 
@@ -23,14 +49,27 @@ def ef_line(**overrides: str) -> str:
     return "\t".join(cols[i] for i in range(1, 32))
 
 
-def y1_line(code: str, payloads: dict[int, str], *, seq: str = "0", summary: str = "0",
-            admission: str = "20260610", patient: str = PATIENT, version: str = "20140401") -> str:
+def y1_line(
+    code: str,
+    payloads: dict[int, str],
+    *,
+    seq: str = "0",
+    summary: str = "0",
+    admission: str = "20260610",
+    patient: str = PATIENT,
+    version: str = "20140401",
+) -> str:
     p = [payloads.get(i, "") for i in range(1, 10)]
     return "\t".join([FACILITY, patient, admission, "0", summary, code, version, seq, *p])
 
 
-def basic_form(patient: str = PATIENT, *, outcome: str = "1", discharge_to: str = "1",
-               dx_modifiers: tuple[str, ...] = ()) -> list[str]:
+def basic_form(
+    patient: str = PATIENT,
+    *,
+    outcome: str = "1",
+    discharge_to: str = "1",
+    dx_modifiers: tuple[str, ...] = (),
+) -> list[str]:
     mods = {5 + i: m for i, m in enumerate(dx_modifiers)}
     return [
         y1_line("A000010", {1: "19500102", 2: "2", 3: "1000001"}, patient=patient),
@@ -50,8 +89,10 @@ def write(path: Path, lines: list[str]) -> Path:
 def fake_athena(d: Path) -> Path:
     """A tiny Athena export. Concept IDs are invented (900000000+)."""
     d.mkdir(parents=True, exist_ok=True)
-    head = ("concept_id\tconcept_name\tdomain_id\tvocabulary_id\tconcept_class_id\t"
-            "standard_concept\tconcept_code\tvalid_start_date\tvalid_end_date\tinvalid_reason")
+    head = (
+        "concept_id\tconcept_name\tdomain_id\tvocabulary_id\tconcept_class_id\t"
+        "standard_concept\tconcept_code\tvalid_start_date\tvalid_end_date\tinvalid_reason"
+    )
     rows = [
         "900000001\tPneumonia, unspecified\tCondition\tICD10\tICD10 code\t\tJ18.9\t19700101\t20991231\t",
         "900000002\tType 2 diabetes\tCondition\tICD10\tICD10 code\t\tE11.9\t19700101\t20991231\t",
@@ -61,15 +102,18 @@ def fake_athena(d: Path) -> Path:
         "900000103\tFracture of neck of femur\tCondition\tSNOMED\tClinical Finding\tS\t5913000\t19700101\t20991231\t",
     ]
     (d / "CONCEPT.csv").write_text("\n".join([head, *rows]) + "\n", encoding="utf-8")
-    rel_head = ("concept_id_1\tconcept_id_2\trelationship_id\tvalid_start_date\t"
-                "valid_end_date\tinvalid_reason")
+    rel_head = (
+        "concept_id_1\tconcept_id_2\trelationship_id\tvalid_start_date\t"
+        "valid_end_date\tinvalid_reason"
+    )
     rels = [
         "900000001\t900000101\tMaps to\t19700101\t20991231\t",
         "900000002\t900000102\tMaps to\t19700101\t20991231\t",
         "900000003\t900000103\tMaps to\t19700101\t20991231\t",
     ]
-    (d / "CONCEPT_RELATIONSHIP.csv").write_text("\n".join([rel_head, *rels]) + "\n",
-                                                encoding="utf-8")
+    (d / "CONCEPT_RELATIONSHIP.csv").write_text(
+        "\n".join([rel_head, *rels]) + "\n", encoding="utf-8"
+    )
     return d
 
 

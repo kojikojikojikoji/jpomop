@@ -31,8 +31,14 @@ from jpomop.parse import pivot_yoshiki1, read_ef, read_yoshiki1
 from jpomop.vocab import Vocab
 
 TABLE_ORDER = [
-    "person", "observation_period", "visit_occurrence", "visit_detail",
-    "condition_occurrence", "procedure_occurrence", "drug_exposure", "death",
+    "person",
+    "observation_period",
+    "visit_occurrence",
+    "visit_detail",
+    "condition_occurrence",
+    "procedure_occurrence",
+    "drug_exposure",
+    "death",
 ]
 
 
@@ -45,8 +51,9 @@ class EtlReport:
     invariant_problems: list[str] = field(default_factory=list)
 
 
-def build_cdm(forms: pa.Table, ef: pa.Table, diagnoses: pa.Table | None = None,
-              vocab: Vocab | None = None) -> tuple[dict[str, pa.Table], EtlReport]:
+def build_cdm(
+    forms: pa.Table, ef: pa.Table, diagnoses: pa.Table | None = None, vocab: Vocab | None = None
+) -> tuple[dict[str, pa.Table], EtlReport]:
     vocab = vocab or Vocab()
     whole = whole_stay_forms(forms)
     pids, vids = person_ids(whole), visit_ids(whole)
@@ -61,13 +68,13 @@ def build_cdm(forms: pa.Table, ef: pa.Table, diagnoses: pa.Table | None = None,
     skipped_rows: dict[str, dict[str, int]] = {}
     if diagnoses is not None:
         cdm["condition_occurrence"], skip = build_condition_occurrence(
-            diagnoses, visits, vids, vocab)
+            diagnoses, visits, vids, vocab
+        )
         skipped_rows["condition_occurrence"] = dict(skip)
     cdm["drug_exposure"], skip = build_drug_exposure(ef, visits, vids, vocab)
     skipped_rows["drug_exposure"] = dict(skip)
     cdm["procedure_occurrence"] = build_procedure_occurrence(ef, visits, vids)
-    skipped = Counter(f"summary_no={s}" for s in forms.column("summary_no").to_pylist()
-                      if s != "0")
+    skipped = Counter(f"summary_no={s}" for s in forms.column("summary_no").to_pylist() if s != "0")
     report = EtlReport(
         rows={k: t.num_rows for k, t in cdm.items()},
         skipped_forms=dict(skipped),
@@ -77,8 +84,9 @@ def build_cdm(forms: pa.Table, ef: pa.Table, diagnoses: pa.Table | None = None,
     return cdm, report
 
 
-def write_cdm(cdm: dict[str, pa.Table], out: Path,
-              fmt: Literal["duckdb", "parquet"] = "duckdb") -> None:
+def write_cdm(
+    cdm: dict[str, pa.Table], out: Path, fmt: Literal["duckdb", "parquet"] = "duckdb"
+) -> None:
     if fmt == "parquet":
         out.mkdir(parents=True, exist_ok=True)
         for name in (n for n in TABLE_ORDER if n in cdm):
@@ -94,9 +102,13 @@ def write_cdm(cdm: dict[str, pa.Table], out: Path,
         con.close()
 
 
-def run_etl(yoshiki1: list[Path], ef: list[Path], out: Path,
-            fmt: Literal["duckdb", "parquet"] = "duckdb",
-            vocab: Path | None = None) -> EtlReport:
+def run_etl(
+    yoshiki1: list[Path],
+    ef: list[Path],
+    out: Path,
+    fmt: Literal["duckdb", "parquet"] = "duckdb",
+    vocab: Path | None = None,
+) -> EtlReport:
     forms, dxs, efs, n_violations = [], [], [], 0
     for p in yoshiki1:
         res = read_yoshiki1(p)
@@ -108,8 +120,12 @@ def run_etl(yoshiki1: list[Path], ef: list[Path], out: Path,
         res = read_ef(p)
         efs.append(res.table)
         n_violations += len(res.violations)
-    cdm, report = build_cdm(pa.concat_tables(forms), pa.concat_tables(efs),
-                            pa.concat_tables(dxs), Vocab.load(vocab) if vocab else None)
+    cdm, report = build_cdm(
+        pa.concat_tables(forms),
+        pa.concat_tables(efs),
+        pa.concat_tables(dxs),
+        Vocab.load(vocab) if vocab else None,
+    )
     report.n_violations = n_violations
     write_cdm(cdm, out, fmt)
     return report

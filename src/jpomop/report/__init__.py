@@ -36,8 +36,9 @@ def coverage(cdm: Path, top: int = 10) -> list[Coverage]:
     con = duckdb.connect(str(cdm), read_only=True)
     out = []
     try:
-        tables = {r[0] for r in con.execute("SELECT table_name FROM information_schema.tables")
-                  .fetchall()}
+        tables = {
+            r[0] for r in con.execute("SELECT table_name FROM information_schema.tables").fetchall()
+        }
         for table, (cid, src) in DOMAINS.items():
             if table not in tables:
                 continue
@@ -51,8 +52,11 @@ def coverage(cdm: Path, top: int = 10) -> list[Coverage]:
                 SELECT {src}, count(*) AS n FROM {table} WHERE {cid} = 0
                 GROUP BY 1 ORDER BY n DESC, 1 LIMIT {top}""").fetchall()
             rows, mapped_rows, codes, mapped_codes = res
-            out.append(Coverage(table, rows, mapped_rows, codes, mapped_codes,
-                                [(s, n) for s, n in unmapped]))
+            out.append(
+                Coverage(
+                    table, rows, mapped_rows, codes, mapped_codes, [(s, n) for s, n in unmapped]
+                )
+            )
     finally:
         con.close()
     return out

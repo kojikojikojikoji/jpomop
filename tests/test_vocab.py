@@ -12,11 +12,14 @@ def test_icd10_candidates() -> None:
 
 
 def test_build_and_map(tmp_path: Path) -> None:
-    master = fake_drug_master(tmp_path / "y.csv", {"620000001": "1111111F1011",
-                                                   "620000002": "2222222F1011"})
+    master = fake_drug_master(
+        tmp_path / "y.csv", {"620000001": "1111111F1011", "620000002": "2222222F1011"}
+    )
     kimura = tmp_path / "kimura.csv"
-    kimura.write_text("Category,NHIDPLC,OSV_ID,OSV_NAME\nPO,1111111F1011,900001001,x\n"
-                      "PO,2222222F1011,N/A,\n", encoding="utf-8")
+    kimura.write_text(
+        "Category,NHIDPLC,OSV_ID,OSV_NAME\nPO,1111111F1011,900001001,x\nPO,2222222F1011,N/A,\n",
+        encoding="utf-8",
+    )
     out = tmp_path / "vocab.duckdb"
     report = build_vocab(fake_athena(tmp_path / "athena"), [master], kimura, out)
     assert (report.icd10_codes, report.icd10_mapped) == (3, 3)
@@ -25,7 +28,7 @@ def test_build_and_map(tmp_path: Path) -> None:
     v = Vocab.load(out)
     assert v.map_icd10("J189").concept_id == 900000101
     assert v.map_icd10("J189").source_concept_id == 900000001
-    assert v.map_icd10("S7200").concept_id == 900000103   # falls back to S72.0
+    assert v.map_icd10("S7200").concept_id == 900000103  # falls back to S72.0
     assert v.map_icd10("Z999").concept_id == 0
     assert v.map_drug("620000001").concept_id == 900001001
     assert v.map_drug("620000002").concept_id == 0

@@ -27,6 +27,14 @@ jpomop = "jpomop.cli:main"
 [tool.ruff]
 line-length = 100
 
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "RUF"]
+# Japanese text uses full-width characters on purpose.
+ignore = ["RUF001", "RUF002", "RUF003"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 

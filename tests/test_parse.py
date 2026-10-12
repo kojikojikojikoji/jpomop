@@ -43,18 +43,26 @@ def test_still_in_hospital_discharge_date_is_null(tmp_path: Path) -> None:
 
 def test_each_ef_problem_is_one_violation(tmp_path: Path) -> None:
     lines = [
-        ef_line(c1="13123456"),        # facility code not zero-padded to 9
-        ef_line(c5=""),                # required data_kubun empty
-        ef_line(c24="20260631"),       # no such date
-        ef_line(c5="12"),              # outpatient-only code
-        ef_line(c12="abc"),            # quantity not a number
-        ef_line(c9="62000000123"),     # receipt code too long
-        "\t".join(["x"] * 30),         # wrong number of fields
+        ef_line(c1="13123456"),  # facility code not zero-padded to 9
+        ef_line(c5=""),  # required data_kubun empty
+        ef_line(c24="20260631"),  # no such date
+        ef_line(c5="12"),  # outpatient-only code
+        ef_line(c12="abc"),  # quantity not a number
+        ef_line(c9="62000000123"),  # receipt code too long
+        "\t".join(["x"] * 30),  # wrong number of fields
     ]
     res = read_ef(write(tmp_path / "ef.txt", lines))
-    assert rules(res.violations) == sorted([
-        "length", "required", "date_invalid", "code_not_in_table", "type", "length", "n_fields",
-    ])
+    assert rules(res.violations) == sorted(
+        [
+            "length",
+            "required",
+            "date_invalid",
+            "code_not_in_table",
+            "type",
+            "length",
+            "n_fields",
+        ]
+    )
     # unknown code keeps the row; malformed rows are dropped
     assert res.table.num_rows == 1
 
@@ -98,8 +106,8 @@ def test_suspected_diagnosis(tmp_path: Path) -> None:
 
 def test_yoshiki1_payload_problems(tmp_path: Path) -> None:
     lines = basic_form()
-    lines[0] = y1_line("A000010", {1: "19500102", 2: "3", 3: "1000001"})   # sex 3
-    lines[2] = y1_line("A000030", {1: "20260615", 2: "1", 3: "1"})         # 24h death empty
+    lines[0] = y1_line("A000010", {1: "19500102", 2: "3", 3: "1000001"})  # sex 3
+    lines[2] = y1_line("A000030", {1: "20260615", 2: "1", 3: "1"})  # 24h death empty
     lines.append(y1_line("A006010", {2: "J189", 4: "4860021", 9: "肺炎"}))  # second main dx
     tables = pivot_yoshiki1(read_yoshiki1(write(tmp_path / "y1.txt", lines)).table)
     assert rules(tables.violations) == ["code_not_in_table", "duplicate_key", "required"]
@@ -114,11 +122,16 @@ def test_missing_patient_record(tmp_path: Path) -> None:
 def test_cross_file(tmp_path: Path) -> None:
     y1 = basic_form() + basic_form("0000000002")
     forms = pivot_yoshiki1(read_yoshiki1(write(tmp_path / "y1.txt", y1)).table).forms
-    ef = read_ef(write(tmp_path / "ef.txt", [
-        ef_line(),
-        ef_line(c24="20260620"),                 # after discharge
-        ef_line(c2="0000000003"),                # no Form 1
-        ef_line(c2="0000000003", c24="20260612"),
-    ])).table
+    ef = read_ef(
+        write(
+            tmp_path / "ef.txt",
+            [
+                ef_line(),
+                ef_line(c24="20260620"),  # after discharge
+                ef_line(c2="0000000003"),  # no Form 1
+                ef_line(c2="0000000003", c24="20260612"),
+            ],
+        )
+    ).table
     found = rules(check_cross_file(ef, forms))
     assert found == ["ef_without_yoshiki1", "exec_outside_stay", "yoshiki1_without_ef"]

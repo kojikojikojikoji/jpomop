@@ -9,7 +9,9 @@ import pyarrow as pa
 from jpomop.parse.fields import Violation
 
 
-def check_cross_file(ef: pa.Table, forms: pa.Table, ef_file: str = "", y1_file: str = "") -> list[Violation]:
+def check_cross_file(
+    ef: pa.Table, forms: pa.Table, ef_file: str = "", y1_file: str = ""
+) -> list[Violation]:
     """Compare stays in the EF file with whole-stay forms (統括診療情報番号 0).
 
     A stay is (facility_code, data_id, admission_date).
@@ -29,16 +31,40 @@ def check_cross_file(ef: pa.Table, forms: pa.Table, ef_file: str = "", y1_file: 
         ef_stays.add(stay)
         if stay not in parents:
             if first_time:
-                out.append(Violation(ef_file, row["_line"], "data_id", row["data_id"],
-                                     "ef_without_yoshiki1", "no Form 1 for this stay"))
+                out.append(
+                    Violation(
+                        ef_file,
+                        row["_line"],
+                        "data_id",
+                        row["data_id"],
+                        "ef_without_yoshiki1",
+                        "no Form 1 for this stay",
+                    )
+                )
             continue
         d = row["exec_date"]
         end = row["discharge_date"]
         if d is not None and (d < row["admission_date"] or (end is not None and d > end)):
-            out.append(Violation(ef_file, row["_line"], "exec_date", d.isoformat(),
-                                 "exec_outside_stay", "date of service is outside the stay"))
+            out.append(
+                Violation(
+                    ef_file,
+                    row["_line"],
+                    "exec_date",
+                    d.isoformat(),
+                    "exec_outside_stay",
+                    "date of service is outside the stay",
+                )
+            )
     for stay, f in parents.items():
         if stay not in ef_stays:
-            out.append(Violation(y1_file, 0, "data_id", f["data_id"],
-                                 "yoshiki1_without_ef", "no EF records for this stay"))
+            out.append(
+                Violation(
+                    y1_file,
+                    0,
+                    "data_id",
+                    f["data_id"],
+                    "yoshiki1_without_ef",
+                    "no EF records for this stay",
+                )
+            )
     return out

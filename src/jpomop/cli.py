@@ -29,8 +29,11 @@ def main() -> None:
 @main.command()
 @click.option("--yoshiki1", "y1_paths", type=_existing, multiple=True, help="Form 1 file(s).")
 @click.option("--ef", "ef_paths", type=_existing, multiple=True, help="EF integrated file(s).")
-@click.option("--out", type=click.Path(dir_okay=False, path_type=Path),
-              help="Write every violation to this CSV file.")
+@click.option(
+    "--out",
+    type=click.Path(dir_okay=False, path_type=Path),
+    help="Write every violation to this CSV file.",
+)
 def validate(y1_paths: tuple[Path, ...], ef_paths: tuple[Path, ...], out: Path | None) -> None:
     """Check DPC files against the FY2026 specification.
 
@@ -52,8 +55,12 @@ def validate(y1_paths: tuple[Path, ...], ef_paths: tuple[Path, ...], out: Path |
         violations += res.violations
         efs.append(res.table)
     if forms and efs:
-        violations += check_cross_file(pa.concat_tables(efs), pa.concat_tables(forms),
-                                       ef_file=ef_paths[0].name, y1_file=y1_paths[0].name)
+        violations += check_cross_file(
+            pa.concat_tables(efs),
+            pa.concat_tables(forms),
+            ef_file=ef_paths[0].name,
+            y1_file=y1_paths[0].name,
+        )
 
     counts = Counter(v.rule for v in violations)
     if not violations:
@@ -83,19 +90,38 @@ def synth(n_patients: int, seed: int, out: Path) -> None:
 @main.command()
 @click.option("--yoshiki1", "y1_paths", type=_existing, multiple=True, required=True)
 @click.option("--ef", "ef_paths", type=_existing, multiple=True, required=True)
-@click.option("--out", type=click.Path(path_type=Path), required=True,
-              help="DuckDB file, or a directory with --format parquet.")
-@click.option("--format", "fmt", type=click.Choice(["duckdb", "parquet"]), default="duckdb",
-              show_default=True)
-@click.option("--vocab", "vocab_path", type=_existing,
-              help="vocab.duckdb from `jpomop vocab build`. Without it, concept IDs are 0.")
-def convert(y1_paths: tuple[Path, ...], ef_paths: tuple[Path, ...], out: Path, fmt: str,
-            vocab_path: Path | None) -> None:
+@click.option(
+    "--out",
+    type=click.Path(path_type=Path),
+    required=True,
+    help="DuckDB file, or a directory with --format parquet.",
+)
+@click.option(
+    "--format", "fmt", type=click.Choice(["duckdb", "parquet"]), default="duckdb", show_default=True
+)
+@click.option(
+    "--vocab",
+    "vocab_path",
+    type=_existing,
+    help="vocab.duckdb from `jpomop vocab build`. Without it, concept IDs are 0.",
+)
+def convert(
+    y1_paths: tuple[Path, ...],
+    ef_paths: tuple[Path, ...],
+    out: Path,
+    fmt: str,
+    vocab_path: Path | None,
+) -> None:
     """Convert DPC files to OMOP CDM v5.4 tables."""
     from jpomop.etl import run_etl
 
-    report = run_etl(list(y1_paths), list(ef_paths), out, fmt,  # type: ignore[arg-type]
-                     vocab=vocab_path)
+    report = run_etl(
+        list(y1_paths),
+        list(ef_paths),
+        out,
+        fmt,  # type: ignore[arg-type]
+        vocab=vocab_path,
+    )
     for name, n in report.rows.items():
         click.echo(f"{name}\t{n}")
     for kind, n in sorted(report.skipped_forms.items()):
@@ -117,14 +143,24 @@ def vocab() -> None:
 
 
 @vocab.command("build")
-@click.option("--athena", type=click.Path(exists=True, file_okay=False, path_type=Path),
-              required=True, help="Folder with CONCEPT.csv and CONCEPT_RELATIONSHIP.csv.")
-@click.option("--drug-master", type=_existing, multiple=True, required=True,
-              help="医薬品マスター y_*.csv (repeat for several files).")
+@click.option(
+    "--athena",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    required=True,
+    help="Folder with CONCEPT.csv and CONCEPT_RELATIONSHIP.csv.",
+)
+@click.option(
+    "--drug-master",
+    type=_existing,
+    multiple=True,
+    required=True,
+    help="医薬品マスター y_*.csv (repeat for several files).",
+)
 @click.option("--kimura", type=_existing, help="Kimura et al. 2025 mapping (.xlsx or .csv).")
 @click.option("--out", type=click.Path(dir_okay=False, path_type=Path), required=True)
-def vocab_build(athena: Path, drug_master: tuple[Path, ...], kimura: Path | None,
-                out: Path) -> None:
+def vocab_build(
+    athena: Path, drug_master: tuple[Path, ...], kimura: Path | None, out: Path
+) -> None:
     from jpomop.vocab import build_vocab
 
     r = build_vocab(athena, list(drug_master), kimura, out)
@@ -140,7 +176,9 @@ def report(cdm: Path, top: int) -> None:
     from jpomop.report import coverage
 
     for c in coverage(cdm, top):
-        click.echo(f"{c.table}\trows {c.mapped_rows}/{c.rows} ({c.row_rate:.1%})\t"
-                   f"codes {c.mapped_codes}/{c.codes} ({c.code_rate:.1%})")
+        click.echo(
+            f"{c.table}\trows {c.mapped_rows}/{c.rows} ({c.row_rate:.1%})\t"
+            f"codes {c.mapped_codes}/{c.codes} ({c.code_rate:.1%})"
+        )
         for code, n in c.top_unmapped:
             click.echo(f"  unmapped {code}\t{n}")

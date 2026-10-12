@@ -24,8 +24,8 @@ import duckdb
 
 # Column positions (1-based) in the drug master. Checked against
 # y_ALL20261001.csv: 42 fields per row.
-DRUG_MASTER_RECEIPT_COL = 3   # レセプト電算処理システム用コード
-DRUG_MASTER_YJ_COL = 32       # 薬価基準収載医薬品コード
+DRUG_MASTER_RECEIPT_COL = 3  # レセプト電算処理システム用コード
+DRUG_MASTER_YJ_COL = 32  # 薬価基準収載医薬品コード
 
 
 @dataclass(frozen=True)
@@ -89,8 +89,9 @@ def _read_kimura(path: Path) -> list[tuple[str, int]]:
     return out
 
 
-def build_vocab(athena_dir: Path, drug_master: list[Path], kimura: Path | None,
-                out: Path) -> VocabBuildReport:
+def build_vocab(
+    athena_dir: Path, drug_master: list[Path], kimura: Path | None, out: Path
+) -> VocabBuildReport:
     out.unlink(missing_ok=True)
     con = duckdb.connect(str(out))
     try:
@@ -141,8 +142,9 @@ class ConceptMatch:
 class Vocab:
     """Lookups used by the ETL. An empty Vocab maps everything to 0."""
 
-    def __init__(self, icd10: dict[str, tuple[int, int]] | None = None,
-                 drugs: dict[str, int] | None = None) -> None:
+    def __init__(
+        self, icd10: dict[str, tuple[int, int]] | None = None, drugs: dict[str, int] | None = None
+    ) -> None:
         self._icd10 = icd10 or {}
         self._drugs = drugs or {}
 
@@ -156,9 +158,12 @@ class Vocab:
                 "ORDER BY concept_id NULLS LAST"
             ).fetchall():
                 icd.setdefault(code, (scid, cid or 0))
-            drugs = {code: cid for code, cid in con.execute(
-                "SELECT receipt_code, concept_id FROM drug_map WHERE concept_id IS NOT NULL"
-            ).fetchall()}
+            drugs = {
+                code: cid
+                for code, cid in con.execute(
+                    "SELECT receipt_code, concept_id FROM drug_map WHERE concept_id IS NOT NULL"
+                ).fetchall()
+            }
         finally:
             con.close()
         return cls(icd, drugs)

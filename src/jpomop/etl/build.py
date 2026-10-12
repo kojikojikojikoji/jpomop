@@ -54,17 +54,19 @@ def build_person(forms: list[dict[str, Any]], pids: dict[Patient, int]) -> pa.Ta
     for key, pid in sorted(pids.items(), key=lambda kv: kv[1]):
         f = first[key]
         b: date | None = f["birth_date"]
-        rows.append({
-            "person_id": pid,
-            "gender_concept_id": C.GENDER.get(f["sex"] or "", C.UNKNOWN),
-            "year_of_birth": b.year if b else None,
-            "month_of_birth": b.month if b else None,
-            "day_of_birth": b.day if b else None,
-            "race_concept_id": C.UNKNOWN,
-            "ethnicity_concept_id": C.UNKNOWN,
-            "person_source_value": source_value(*key),
-            "gender_source_value": f["sex"],
-        })
+        rows.append(
+            {
+                "person_id": pid,
+                "gender_concept_id": C.GENDER.get(f["sex"] or "", C.UNKNOWN),
+                "year_of_birth": b.year if b else None,
+                "month_of_birth": b.month if b else None,
+                "day_of_birth": b.day if b else None,
+                "race_concept_id": C.UNKNOWN,
+                "ethnicity_concept_id": C.UNKNOWN,
+                "person_source_value": source_value(*key),
+                "gender_source_value": f["sex"],
+            }
+        )
     return pa.Table.from_pylist(rows, schema=S.PERSON)
 
 
@@ -74,20 +76,22 @@ def build_visit_occurrence(
     rows = []
     for f in forms:
         stay = (f["facility_code"], f["data_id"], f["admission_date"])
-        rows.append({
-            "visit_occurrence_id": vids[stay],
-            "person_id": pids[stay[:2]],
-            "visit_concept_id": C.INPATIENT_VISIT,
-            "visit_start_date": f["admission_date"],
-            "visit_end_date": f["discharge_date"] or f["admission_date"],
-            "visit_type_concept_id": C.TYPE_CLAIM,
-            "visit_source_value": "dpc_yoshiki1",
-            "visit_source_concept_id": C.UNKNOWN,
-            "admitted_from_concept_id": C.UNKNOWN,
-            "admitted_from_source_value": f["admission_route"],
-            "discharged_to_concept_id": C.UNKNOWN,
-            "discharged_to_source_value": f["discharge_to"],
-        })
+        rows.append(
+            {
+                "visit_occurrence_id": vids[stay],
+                "person_id": pids[stay[:2]],
+                "visit_concept_id": C.INPATIENT_VISIT,
+                "visit_start_date": f["admission_date"],
+                "visit_end_date": f["discharge_date"] or f["admission_date"],
+                "visit_type_concept_id": C.TYPE_CLAIM,
+                "visit_source_value": "dpc_yoshiki1",
+                "visit_source_concept_id": C.UNKNOWN,
+                "admitted_from_concept_id": C.UNKNOWN,
+                "admitted_from_source_value": f["admission_route"],
+                "discharged_to_concept_id": C.UNKNOWN,
+                "discharged_to_source_value": f["discharge_to"],
+            }
+        )
     return pa.Table.from_pylist(rows, schema=S.VISIT_OCCURRENCE)
 
 
@@ -95,8 +99,9 @@ def build_visit_detail(ef: pa.Table, visits: pa.Table, vids: dict[Stay, int]) ->
     """One row per run of consecutive service dates on the same ward."""
     vinfo = {r["visit_occurrence_id"]: r for r in visits.to_pylist()}
     days: dict[int, dict[date, str]] = defaultdict(dict)
-    for r in ef.select(["facility_code", "data_id", "admission_date", "exec_date",
-                        "ward_code"]).to_pylist():
+    for r in ef.select(
+        ["facility_code", "data_id", "admission_date", "exec_date", "ward_code"]
+    ).to_pylist():
         vid = vids.get((r["facility_code"], r["data_id"], r["admission_date"]))
         if vid is None or r["exec_date"] is None:
             continue
@@ -116,20 +121,22 @@ def build_visit_detail(ef: pa.Table, visits: pa.Table, vids: dict[Stay, int]) ->
         for ward, start, end in runs:
             start = max(start, v["visit_start_date"])
             end = min(end, v["visit_end_date"])
-            rows.append({
-                "visit_detail_id": next_id,
-                "person_id": v["person_id"],
-                "visit_detail_concept_id": C.INPATIENT_VISIT,
-                "visit_detail_start_date": start,
-                "visit_detail_end_date": end,
-                "visit_detail_type_concept_id": C.TYPE_CLAIM,
-                "visit_detail_source_value": ward,
-                "visit_detail_source_concept_id": C.UNKNOWN,
-                "admitted_from_concept_id": C.UNKNOWN,
-                "discharged_to_concept_id": C.UNKNOWN,
-                "preceding_visit_detail_id": prev,
-                "visit_occurrence_id": vid,
-            })
+            rows.append(
+                {
+                    "visit_detail_id": next_id,
+                    "person_id": v["person_id"],
+                    "visit_detail_concept_id": C.INPATIENT_VISIT,
+                    "visit_detail_start_date": start,
+                    "visit_detail_end_date": end,
+                    "visit_detail_type_concept_id": C.TYPE_CLAIM,
+                    "visit_detail_source_value": ward,
+                    "visit_detail_source_concept_id": C.UNKNOWN,
+                    "admitted_from_concept_id": C.UNKNOWN,
+                    "discharged_to_concept_id": C.UNKNOWN,
+                    "preceding_visit_detail_id": prev,
+                    "visit_occurrence_id": vid,
+                }
+            )
             prev = next_id
             next_id += 1
     return pa.Table.from_pylist(rows, schema=S.VISIT_DETAIL)
@@ -145,8 +152,13 @@ def build_observation_period(visits: pa.Table) -> pa.Table:
         else:
             span[v["person_id"]] = [s, e]
     rows = [
-        {"observation_period_id": pid, "person_id": pid, "observation_period_start_date": s,
-         "observation_period_end_date": e, "period_type_concept_id": C.TYPE_CLAIM}
+        {
+            "observation_period_id": pid,
+            "person_id": pid,
+            "observation_period_start_date": s,
+            "observation_period_end_date": e,
+            "period_type_concept_id": C.TYPE_CLAIM,
+        }
         for pid, (s, e) in sorted(span.items())
     ]
     return pa.Table.from_pylist(rows, schema=S.OBSERVATION_PERIOD)
@@ -161,8 +173,12 @@ def build_death(forms: list[dict[str, Any]], pids: dict[Patient, int]) -> pa.Tab
             pid = pids[(f["facility_code"], f["data_id"])]
             latest[pid] = max(latest.get(pid, f["discharge_date"]), f["discharge_date"])
     rows = [
-        {"person_id": pid, "death_date": d, "death_type_concept_id": C.TYPE_CLAIM,
-         "cause_concept_id": C.UNKNOWN}
+        {
+            "person_id": pid,
+            "death_date": d,
+            "death_type_concept_id": C.TYPE_CLAIM,
+            "cause_concept_id": C.UNKNOWN,
+        }
         for pid, d in sorted(latest.items())
     ]
     return pa.Table.from_pylist(rows, schema=S.DEATH)

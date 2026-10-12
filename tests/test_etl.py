@@ -19,7 +19,10 @@ def test_person_and_visit(tmp_path: Path) -> None:
     person = cdm["person"].to_pylist()[0]
     assert person["gender_concept_id"] == 8532
     assert (person["year_of_birth"], person["month_of_birth"], person["day_of_birth"]) == (
-        1950, 1, 2)
+        1950,
+        1,
+        2,
+    )
     assert len(person["person_source_value"]) == 16
     assert "0000000001" not in person["person_source_value"]
     visit = cdm["visit_occurrence"].to_pylist()[0]
@@ -30,7 +33,8 @@ def test_person_and_visit(tmp_path: Path) -> None:
 
 def test_death_only_for_outcome_6_or_7(tmp_path: Path) -> None:
     y1 = basic_form("0000000001", outcome="6", discharge_to="8") + basic_form(
-        "0000000002", outcome="5", discharge_to="8")
+        "0000000002", outcome="5", discharge_to="8"
+    )
     cdm, _ = cdm_from(tmp_path, y1, [ef_line()])
     deaths = cdm["death"].to_pylist()
     assert len(deaths) == 1
@@ -47,15 +51,23 @@ def test_ward_runs_become_visit_details(tmp_path: Path) -> None:
     cdm, report = cdm_from(tmp_path, basic_form(), ef)
     assert report.invariant_problems == []
     details = cdm["visit_detail"].to_pylist()
-    assert [(d["visit_detail_source_value"], d["visit_detail_start_date"].day,
-             d["visit_detail_end_date"].day) for d in details] == [
-        ("W1", 10, 11), ("ICU", 12, 12), ("W1", 13, 13)]
+    assert [
+        (
+            d["visit_detail_source_value"],
+            d["visit_detail_start_date"].day,
+            d["visit_detail_end_date"].day,
+        )
+        for d in details
+    ] == [("W1", 10, 11), ("ICU", 12, 12), ("W1", 13, 13)]
     assert details[1]["preceding_visit_detail_id"] == details[0]["visit_detail_id"]
 
 
 def test_ward_group_forms_are_counted_not_converted(tmp_path: Path) -> None:
-    y1 = basic_form() + [y1_line("A000010", {1: "19500102", 2: "2", 3: "1000001"}, summary="1"),
-                         y1_line("A000030", {1: "20260612", 2: "0", 3: "1", 4: "0"}, summary="1")]
+    y1 = [
+        *basic_form(),
+        y1_line("A000010", {1: "19500102", 2: "2", 3: "1000001"}, summary="1"),
+        y1_line("A000030", {1: "20260612", 2: "0", 3: "1", 4: "0"}, summary="1"),
+    ]
     cdm, report = cdm_from(tmp_path, y1, [ef_line()])
     assert cdm["visit_occurrence"].num_rows == 1
     assert report.skipped_forms == {"summary_no=1": 1}
@@ -95,8 +107,12 @@ def test_conditions(tmp_path: Path) -> None:
     y1.append(y1_line("A006050", {2: "J189", 4: "4860021", 9: "肺炎"}, seq="1"))
     vocab = Vocab(icd10={"J18.9": (900000001, 900000101)})
     forms_t = pivot_yoshiki1(read_yoshiki1(write(tmp_path / "y1.txt", y1)).table)
-    cdm, report = build_cdm(forms_t.forms, read_ef(write(tmp_path / "ef.txt", [ef_line()])).table,
-                            forms_t.diagnoses, vocab)
+    cdm, report = build_cdm(
+        forms_t.forms,
+        read_ef(write(tmp_path / "ef.txt", [ef_line()])).table,
+        forms_t.diagnoses,
+        vocab,
+    )
     rows = cdm["condition_occurrence"].to_pylist()
     assert sorted(r["condition_source_value"] for r in rows) == ["E119", "I10", "J189"]
     j18 = next(r for r in rows if r["condition_source_value"] == "J189")
@@ -109,10 +125,12 @@ def test_conditions(tmp_path: Path) -> None:
 
 
 def test_suspected_diagnosis_is_left_out(tmp_path: Path) -> None:
-    forms_t = pivot_yoshiki1(read_yoshiki1(write(tmp_path / "y1.txt",
-                                                 basic_form(dx_modifiers=("8002",)))).table)
-    cdm, report = build_cdm(forms_t.forms, read_ef(write(tmp_path / "ef.txt", [ef_line()])).table,
-                            forms_t.diagnoses)
+    forms_t = pivot_yoshiki1(
+        read_yoshiki1(write(tmp_path / "y1.txt", basic_form(dx_modifiers=("8002",)))).table
+    )
+    cdm, report = build_cdm(
+        forms_t.forms, read_ef(write(tmp_path / "ef.txt", [ef_line()])).table, forms_t.diagnoses
+    )
     sources = [r["condition_source_value"] for r in cdm["condition_occurrence"].to_pylist()]
     assert "J189" not in sources
     assert report.skipped_rows["condition_occurrence"]["suspected"] == 1
@@ -120,11 +138,11 @@ def test_suspected_diagnosis_is_left_out(tmp_path: Path) -> None:
 
 def test_drugs_and_procedures(tmp_path: Path) -> None:
     ef = [
-        ef_line(),                                                 # drug
-        ef_line(c17="001000000000"),                              # brought from home
-        ef_line(c17="100000000000", c24="20260615"),              # discharge prescription
-        ef_line(c5="50", c9="150000001", c10="K9999", c21="1"),   # surgery
-        ef_line(c5="90", c9="190000001"),                         # room charge, not a procedure
+        ef_line(),  # drug
+        ef_line(c17="001000000000"),  # brought from home
+        ef_line(c17="100000000000", c24="20260615"),  # discharge prescription
+        ef_line(c5="50", c9="150000001", c10="K9999", c21="1"),  # surgery
+        ef_line(c5="90", c9="190000001"),  # room charge, not a procedure
     ]
     cdm, report = cdm_from(tmp_path, basic_form(), ef)
     drugs = cdm["drug_exposure"].to_pylist()
@@ -135,5 +153,6 @@ def test_drugs_and_procedures(tmp_path: Path) -> None:
     assert report.skipped_rows["drug_exposure"] == {"brought_from_home": 1}
     procs = cdm["procedure_occurrence"].to_pylist()
     assert [(p["procedure_source_value"], p["modifier_source_value"]) for p in procs] == [
-        ("150000001", "K9999")]
+        ("150000001", "K9999")
+    ]
     assert report.invariant_problems == []
