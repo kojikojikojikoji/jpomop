@@ -18,7 +18,7 @@ I plan to release v0.1 at the end of November 2026.
 ## Try it
 
 ```sh
-pip install -e .
+pip install jpomop
 jpomop synth --n 100 --out synth/
 jpomop validate --yoshiki1 synth/yoshiki1.txt --ef synth/ef.txt
 jpomop convert --yoshiki1 synth/yoshiki1.txt --ef synth/ef.txt --out cdm.duckdb
@@ -47,9 +47,9 @@ You need the following three sources, and you must download them yourself.
 
 ## Walkthrough
 
-[examples/walkthrough_en.ipynb](examples/walkthrough_en.ipynb) runs every step on 100 invented patients.
+[examples/walkthrough_en.ipynb](https://github.com/kojikojikojikoji/jpomop/blob/main/examples/walkthrough_en.ipynb) runs every step on 100 invented patients.
 It shows the input files, the checks and each CDM table for one patient.
-A Japanese version is in [examples/walkthrough_ja.ipynb](examples/walkthrough_ja.ipynb).
+A Japanese version is in [examples/walkthrough_ja.ipynb](https://github.com/kojikojikojikoji/jpomop/blob/main/examples/walkthrough_ja.ipynb).
 
 ## How each part is converted
 
@@ -77,7 +77,7 @@ Please download them from https://www.hpdx.or.jp/seikyushiharai/tensuhyo/kihonma
 ## Sources
 
 Each field in the specification files shows the document, the version and the page.
-See [PROVENANCE.md](PROVENANCE.md).
+See [PROVENANCE.md](https://github.com/kojikojikojikoji/jpomop/blob/main/PROVENANCE.md).
 
 ## Licence
 
@@ -92,6 +92,6 @@ Mapping tables made by this project use CC BY 4.0. See [LICENSE-DATA](LICENSE-DA
 
 読み込み・仕様の確認・8つの表への変換までできています。病院の実データでの確認と、Athena の語彙一式での変換率の測定はこれからです。
 
-架空の患者 100 人のデータで最初から最後まで動かした例を、[examples/walkthrough_ja.ipynb](examples/walkthrough_ja.ipynb) に置いています。
+架空の患者 100 人のデータで最初から最後まで動かした例を、[examples/walkthrough_ja.ipynb](https://github.com/kojikojikojikoji/jpomop/blob/main/examples/walkthrough_ja.ipynb) に置いています。
 
 マスターは、医療情報基盤・診療報酬審査支払機構のサイトから各自でダウンロードしてください。
