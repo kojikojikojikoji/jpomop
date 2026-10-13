@@ -26,6 +26,8 @@ jpomop = "jpomop.cli:main"
 
 [tool.ruff]
 line-length = 100
+# The notebooks keep imports next to the step that uses them.
+extend-exclude = ["examples"]
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "B", "UP", "RUF"]

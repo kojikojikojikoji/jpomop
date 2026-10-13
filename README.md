@@ -45,6 +45,12 @@ You need the following three sources, and you must download them yourself.
 - The drug master (医薬品マスター, `y_*.csv`) (https://www.hpdx.or.jp/seikyushiharai/tensuhyo/kihonmasta/kihonmasta_04.html)
 - The drug mapping table by Kimura et al. 2025, CC BY 4.0 (https://doi.org/10.17632/y3756v8237.1)
 
+## Walkthrough
+
+[examples/walkthrough_en.ipynb](examples/walkthrough_en.ipynb) runs every step on 100 invented patients.
+It shows the input files, the checks and each CDM table for one patient.
+A Japanese version is in [examples/walkthrough_ja.ipynb](examples/walkthrough_ja.ipynb).
+
 ## How each part is converted
 
 | DPC | CDM table | Notes |
@@ -85,5 +91,7 @@ Mapping tables made by this project use CC BY 4.0. See [LICENSE-DATA](LICENSE-DA
 厚生労働省が公開している DPC 調査の仕様（様式1・入院EF統合ファイル）だけを元に、DPC データを OMOP CDM v5.4 へ変換する Python のプログラムです。病院の実データとマスターは含みません。動作の確認には、このリポジトリで作る架空データと、仕様書の記載例だけを使っています。
 
 読み込み・仕様の確認・8つの表への変換までできています。病院の実データでの確認と、Athena の語彙一式での変換率の測定はこれからです。
+
+架空の患者 100 人のデータで最初から最後まで動かした例を、[examples/walkthrough_ja.ipynb](examples/walkthrough_ja.ipynb) に置いています。
 
 マスターは、医療情報基盤・診療報酬審査支払機構のサイトから各自でダウンロードしてください。
