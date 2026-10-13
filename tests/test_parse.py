@@ -135,3 +135,12 @@ def test_cross_file(tmp_path: Path) -> None:
     ).table
     found = rules(check_cross_file(ef, forms))
     assert found == ["ef_without_yoshiki1", "exec_outside_stay", "yoshiki1_without_ef"]
+
+
+def test_impossible_birth_date_is_reported(tmp_path: Path) -> None:
+    lines = basic_form()
+    lines[0] = y1_line("A000010", {1: "19520230", 2: "1", 3: "1000001"})  # 30 February
+    tables = pivot_yoshiki1(read_yoshiki1(write(tmp_path / "y1.txt", lines)).table)
+    assert [(v.field, v.rule) for v in tables.violations] == [
+        ("A000010.1:birth_date", "date_invalid")
+    ]

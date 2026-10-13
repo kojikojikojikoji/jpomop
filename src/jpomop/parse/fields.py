@@ -59,6 +59,8 @@ def check_value(
         return "date_invalid", "not a valid YYYYMMDD date or 00000000"
     if type_ == "date8_partial" and not (len(value) == 8 and value.isdigit()):
         return "date_invalid", "must be 8 digits (unknown parts as 0)"
+    if type_ == "date8_partial" and value[:4] != "0000" and partial_date(value) is None:
+        return "date_invalid", "not a calendar date"
     if codes is not None and value not in codes:
         return "code_not_in_table", "not in the code table"
     return None

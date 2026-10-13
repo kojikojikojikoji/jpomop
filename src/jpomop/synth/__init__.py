@@ -200,6 +200,8 @@ def generate(out_dir: Path, n_patients: int = 100, *, seed: int = 20261012) -> S
                     )
                     order += 1
                 d += timedelta(days=1)
+            if died:
+                break
 
     paths = {"yoshiki1": out_dir / "yoshiki1.txt", "ef": out_dir / "ef.txt"}
     for key, lines in (("yoshiki1", y1), ("ef", ef)):

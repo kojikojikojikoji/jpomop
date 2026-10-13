@@ -193,3 +193,24 @@ def test_same_day_stays_become_one_visit(tmp_path: Path) -> None:
     assert cdm["visit_occurrence"].num_rows == 1
     assert report.skipped_forms == {"same_day_stays_merged": 1}
     assert report.invariant_problems == []
+
+
+def test_stay_after_death_is_reported(tmp_path: Path) -> None:
+    first = basic_form(outcome="6", discharge_to="8")
+    second = [
+        y1_line("A000010", {1: "19500102", 2: "2", 3: "1000001"}, admission="20260620"),
+        y1_line("A000020", {1: "20260620", 2: "1", 5: "100", 6: "0"}, admission="20260620"),
+        y1_line("A000030", {1: "20260622", 2: "1", 3: "1", 4: "0"}, admission="20260620"),
+    ]
+    ef = [ef_line(), ef_line(c3="20260622", c4="20260620", c24="20260621")]
+    _, report = cdm_from(tmp_path, first + second, ef)
+    assert report.invariant_problems == ["visit_occurrence: stay starts after death for 1"]
+
+
+def test_synthetic_patients_have_no_stay_after_death(tmp_path: Path) -> None:
+    from jpomop.synth import generate
+
+    m = generate(tmp_path / "s", 500)
+    report = run_etl([m.yoshiki1], [m.ef], tmp_path / "cdm.duckdb")
+    assert report.rows["death"] > 0
+    assert report.invariant_problems == []

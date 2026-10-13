@@ -47,6 +47,10 @@ def check_invariants(cdm: dict[str, pa.Table]) -> list[str]:
                 problems.append(f"{table}: outside observation_period for person {pid}")
 
     visits = {r["visit_occurrence_id"]: r for r in cdm["visit_occurrence"].to_pylist()}
+    died = {r["person_id"]: r["death_date"] for r in cdm["death"].to_pylist()}
+    for v in visits.values():
+        if v["person_id"] in died and v["visit_start_date"] > died[v["person_id"]]:
+            problems.append(f"visit_occurrence: stay starts after death for {v['person_id']}")
     for r in cdm["visit_detail"].to_pylist():
         v = visits.get(r["visit_occurrence_id"])
         if v is None:
