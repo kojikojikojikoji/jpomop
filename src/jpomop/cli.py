@@ -156,7 +156,7 @@ def vocab() -> None:
     required=True,
     help="医薬品マスター y_*.csv (repeat for several files).",
 )
-@click.option("--kimura", type=_existing, help="Kimura et al. 2025 mapping (.xlsx or .csv).")
+@click.option("--kimura", type=_existing, help="Kimura et al. 2025 mapping (rxnorm_mapping.tsv).")
 @click.option("--out", type=click.Path(dir_okay=False, path_type=Path), required=True)
 def vocab_build(
     athena: Path, drug_master: tuple[Path, ...], kimura: Path | None, out: Path

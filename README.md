@@ -35,7 +35,7 @@ To map diagnoses and drugs, build a vocabulary first:
 
 ```sh
 jpomop vocab build --athena athena/ --drug-master y_ALL20261001.csv \
-    --kimura kimura_rxnorm.xlsx --out vocab.duckdb
+    --kimura rxnorm_mapping.tsv --out vocab.duckdb
 jpomop convert ... --vocab vocab.duckdb
 ```
 

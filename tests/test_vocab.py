@@ -32,3 +32,16 @@ def test_build_and_map(tmp_path: Path) -> None:
     assert v.map_icd10("Z999").concept_id == 0
     assert v.map_drug("620000001").concept_id == 900001001
     assert v.map_drug("620000002").concept_id == 0
+
+
+def test_reads_the_published_tsv_layout(tmp_path: Path) -> None:
+    # rxnorm_mapping.tsv is tab-separated and its header reads "NHIDPLC ".
+    master = fake_drug_master(tmp_path / "y.csv", {"620000001": "1111111F1011"})
+    kimura = tmp_path / "rxnorm_mapping.tsv"
+    kimura.write_text(
+        "Category\tNHIDPLC \tOSV_ID\tOSV_NAME\nPO\t1111111F1011\t900001001\tx\n",
+        encoding="utf-8",
+    )
+    out = tmp_path / "vocab.duckdb"
+    report = build_vocab(fake_athena(tmp_path / "athena"), [master], kimura, out)
+    assert report.receipt_drugs_mapped == 1

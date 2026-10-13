@@ -8,8 +8,8 @@ Nothing here is shipped with jpomop. Users download:
 - The drug master (医薬品マスター, y_*.csv) from
   https://www.hpdx.or.jp/seikyushiharai/tensuhyo/kihonmasta/kihonmasta_04.html
 - Kimura et al. (2025) Japanese drug to RxNorm mapping, CC BY 4.0,
-  https://doi.org/10.17632/y3756v8237.1 (Excel, or saved as CSV keeping the
-  NHIDPLC and OSV_ID columns).
+  https://doi.org/10.17632/y3756v8237.1 (rxnorm_mapping.tsv; the NHIDPLC
+  and OSV_ID columns are used).
 
 `build_vocab` joins them into one small DuckDB file.
 """
@@ -76,8 +76,13 @@ def _read_kimura(path: Path) -> list[tuple[str, int]]:
                 continue
             records += [dict(zip(header, row, strict=False)) for row in it]
     else:
+        # The published file is tab-separated and its header has trailing spaces.
         with path.open(encoding="utf-8-sig", newline="") as f:
-            records = list(csv.DictReader(f))
+            delimiter = "\t" if "\t" in f.readline() else ","
+            f.seek(0)
+            reader = csv.reader(f, delimiter=delimiter)
+            header = [h.strip() for h in next(reader, [])]
+            records = [dict(zip(header, row, strict=False)) for row in reader]
     out = []
     for rec in records:
         code, cid = rec.get("NHIDPLC"), rec.get("OSV_ID")
