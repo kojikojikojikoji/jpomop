@@ -115,10 +115,13 @@ def build_vocab(
             WHERE c.vocabulary_id = 'ICD10'
         """)
         con.execute("CREATE TABLE receipt_yj (receipt_code VARCHAR, yj_code VARCHAR)")
-        con.executemany("INSERT INTO receipt_yj VALUES (?, ?)", _read_drug_master(drug_master))
+        receipt_rows = _read_drug_master(drug_master)
+        if receipt_rows:
+            con.executemany("INSERT INTO receipt_yj VALUES (?, ?)", receipt_rows)
         con.execute("CREATE TABLE yj_rxnorm (yj_code VARCHAR, concept_id BIGINT)")
-        if kimura:
-            con.executemany("INSERT INTO yj_rxnorm VALUES (?, ?)", _read_kimura(kimura))
+        kimura_rows = _read_kimura(kimura) if kimura else []
+        if kimura_rows:
+            con.executemany("INSERT INTO yj_rxnorm VALUES (?, ?)", kimura_rows)
         con.execute("""
             CREATE TABLE drug_map AS
             SELECT r.receipt_code, r.yj_code, min(k.concept_id) AS concept_id
@@ -148,7 +151,9 @@ class Vocab:
     """Lookups used by the ETL. An empty Vocab maps everything to 0."""
 
     def __init__(
-        self, icd10: dict[str, tuple[int, int]] | None = None, drugs: dict[str, int] | None = None
+        self,
+        icd10: dict[str, tuple[int, list[int]]] | None = None,
+        drugs: dict[str, int] | None = None,
     ) -> None:
         self._icd10 = icd10 or {}
         self._drugs = drugs or {}
@@ -157,12 +162,14 @@ class Vocab:
     def load(cls, path: Path) -> Vocab:
         con = duckdb.connect(str(path), read_only=True)
         try:
-            icd: dict[str, tuple[int, int]] = {}
+            icd: dict[str, tuple[int, list[int]]] = {}
             for code, scid, cid in con.execute(
                 "SELECT source_code, source_concept_id, concept_id FROM icd10_map "
-                "ORDER BY concept_id NULLS LAST"
+                "ORDER BY source_code, concept_id NULLS LAST"
             ).fetchall():
-                icd.setdefault(code, (scid, cid or 0))
+                targets = icd.setdefault(code, (scid, []))[1]
+                if cid is not None and cid not in targets:
+                    targets.append(cid)
             drugs = {
                 code: cid
                 for code, cid in con.execute(
@@ -174,11 +181,22 @@ class Vocab:
         return cls(icd, drugs)
 
     def map_icd10(self, code: str) -> ConceptMatch:
+        """The first standard concept. Use map_icd10_all when a code maps to several."""
+        return self.map_icd10_all(code)[0]
+
+    def map_icd10_all(self, code: str) -> list[ConceptMatch]:
+        """One match for each standard concept that the ICD-10 code maps to.
+
+        Some ICD-10 codes map to two or more standard concepts. The OMOP
+        conventions keep one row for each, so the ETL writes them all.
+        """
         for cand in icd10_candidates(code):
             if cand in self._icd10:
-                scid, cid = self._icd10[cand]
-                return ConceptMatch(cid, scid, code)
-        return ConceptMatch(0, 0, code)
+                scid, targets = self._icd10[cand]
+                return [ConceptMatch(cid, scid, code) for cid in targets] or [
+                    ConceptMatch(0, scid, code)
+                ]
+        return [ConceptMatch(0, 0, code)]
 
     def map_drug(self, receipt_code: str) -> ConceptMatch:
         return ConceptMatch(self._drugs.get(receipt_code, 0), 0, receipt_code)

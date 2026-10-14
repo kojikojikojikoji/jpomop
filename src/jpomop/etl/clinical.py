@@ -57,23 +57,23 @@ def build_condition_occurrence(
                 continue
         best[key] = dx
     rows: list[dict[str, Any]] = []
-    for n, ((vid, icd), dx) in enumerate(sorted(best.items()), start=1):
+    for (vid, icd), dx in sorted(best.items()):
         v = vinfo[vid]
-        m = vocab.map_icd10(icd)
-        rows.append(
-            {
-                "condition_occurrence_id": n,
-                "person_id": v["person_id"],
-                "condition_concept_id": m.concept_id,
-                "condition_start_date": v["visit_start_date"],
-                "condition_type_concept_id": C.TYPE_CLAIM,
-                "condition_status_concept_id": C.CONDITION_STATUS.get(dx["role"], C.UNKNOWN),
-                "visit_occurrence_id": vid,
-                "condition_source_value": icd,
-                "condition_source_concept_id": m.source_concept_id,
-                "condition_status_source_value": dx["role"],
-            }
-        )
+        for m in vocab.map_icd10_all(icd):
+            rows.append(
+                {
+                    "condition_occurrence_id": len(rows) + 1,
+                    "person_id": v["person_id"],
+                    "condition_concept_id": m.concept_id,
+                    "condition_start_date": v["visit_start_date"],
+                    "condition_type_concept_id": C.TYPE_CLAIM,
+                    "condition_status_concept_id": C.CONDITION_STATUS.get(dx["role"], C.UNKNOWN),
+                    "visit_occurrence_id": vid,
+                    "condition_source_value": icd,
+                    "condition_source_concept_id": m.source_concept_id,
+                    "condition_status_source_value": dx["role"],
+                }
+            )
     return pa.Table.from_pylist(rows, schema=S.CONDITION_OCCURRENCE), skipped
 
 

@@ -46,6 +46,12 @@ TESTS = [
     ("70", "170999901", "架空画像診断", "", "0000000.000"),
 ]
 SURGERY = ("50", "150999901", "架空手術", "K9999")
+# A diagnosis that arose after admission (入院後発症疾患, A006050).
+AFTER_ADMISSION = ("J690", "9000201", "誤嚥性肺炎")
+# 行為明細区分情報 (EF-17, p195): digit 1 is 退院時処方, digits 3 and 4 mark 持参薬.
+FLAGS_NONE = "000000000000"
+FLAGS_DISCHARGE_RX = "100000000000"
+FLAGS_BROUGHT_IN = "002200000000"  # used, not for the admitting illness; prescribed elsewhere
 
 
 @dataclass(frozen=True)
@@ -76,6 +82,7 @@ def _ef(
     exec_date: str,
     ward: str,
     kaishaku: str = "",
+    flags: str = FLAGS_NONE,
 ) -> str:
     cols = [
         FACILITY,
@@ -94,8 +101,8 @@ def _ef(
         "100",
         "0",
         "100",
-        "000000000000",
-        "100",
+        flags,
+        "0" if flags[2] != "0" else "100",  # 行為点数 is 0 for 持参薬 (p195)
         "0",
         "0",
         "1",
@@ -200,6 +207,25 @@ def generate(out_dir: Path, n_patients: int = 100, *, seed: int = 20261012) -> S
                     )
                     order += 1
                 d += timedelta(days=1)
+
+            # Drugs the patient brought from home, and drugs given at discharge.
+            if rng.random() < 0.25:
+                k, c, n, u, q = DRUGS[0]
+                ward = "W2" if move_day and adm_d >= move_day else "W1"
+                ef.append(
+                    _ef(pid, adm, dis, k, order, 1, c, n, u, q, adm, ward, flags=FLAGS_BROUGHT_IN)
+                )
+                order += 1
+            if not died and rng.random() < 0.4:
+                k, c, n, u, q = DRUGS[1]
+                ward = "W2" if move_day and dis_d >= move_day else "W1"
+                ef.append(
+                    _ef(pid, adm, dis, k, order, 1, c, n, u, q, dis, ward, flags=FLAGS_DISCHARGE_RX)
+                )
+                order += 1
+            if rng.random() < 0.08:
+                a_icd, a_code, a_name = AFTER_ADMISSION
+                y1.append(_y1(pid, adm, "A006050", 1, {2: a_icd, 4: a_code, 9: a_name}))
             if died:
                 break
 

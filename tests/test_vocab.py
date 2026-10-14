@@ -45,3 +45,19 @@ def test_reads_the_published_tsv_layout(tmp_path: Path) -> None:
     out = tmp_path / "vocab.duckdb"
     report = build_vocab(fake_athena(tmp_path / "athena"), [master], kimura, out)
     assert report.receipt_drugs_mapped == 1
+
+
+def test_code_with_two_standard_concepts(tmp_path: Path) -> None:
+    athena = fake_athena(tmp_path / "athena")
+    with (athena / "CONCEPT.csv").open("a", encoding="utf-8") as f:
+        f.write(
+            "900000104\tAnother target\tCondition\tSNOMED\tClinical Finding\tS\t1\t19700101\t20991231\t\n"
+        )
+    with (athena / "CONCEPT_RELATIONSHIP.csv").open("a", encoding="utf-8") as f:
+        f.write("900000001\t900000104\tMaps to\t19700101\t20991231\t\n")
+    out = tmp_path / "vocab.duckdb"
+    build_vocab(athena, [fake_drug_master(tmp_path / "y.csv", {})], None, out)
+    v = Vocab.load(out)
+    assert [m.concept_id for m in v.map_icd10_all("J189")] == [900000101, 900000104]
+    assert v.map_icd10("J189").concept_id == 900000101
+    assert [m.concept_id for m in v.map_icd10_all("Z999")] == [0]

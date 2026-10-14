@@ -105,7 +105,7 @@ def test_conditions(tmp_path: Path) -> None:
     y1 = basic_form()
     # same ICD-10 as the main diagnosis, in a lower-priority field
     y1.append(y1_line("A006050", {2: "J189", 4: "4860021", 9: "肺炎"}, seq="1"))
-    vocab = Vocab(icd10={"J18.9": (900000001, 900000101)})
+    vocab = Vocab(icd10={"J18.9": (900000001, [900000101])})
     forms_t = pivot_yoshiki1(read_yoshiki1(write(tmp_path / "y1.txt", y1)).table)
     cdm, report = build_cdm(
         forms_t.forms,
@@ -121,6 +121,27 @@ def test_conditions(tmp_path: Path) -> None:
     assert j18["condition_status_concept_id"] == 32902
     assert j18["condition_start_date"] == date(2026, 6, 10)
     assert report.skipped_rows["condition_occurrence"] == {"duplicate_in_stay": 1}
+    assert report.invariant_problems == []
+
+
+def test_code_with_two_standard_concepts_gives_two_rows(tmp_path: Path) -> None:
+    from jpomop.vocab import Vocab
+
+    vocab = Vocab(icd10={"J18.9": (900000001, [900000101, 900000102])})
+    forms_t = pivot_yoshiki1(read_yoshiki1(write(tmp_path / "y1.txt", basic_form())).table)
+    cdm, report = build_cdm(
+        forms_t.forms,
+        read_ef(write(tmp_path / "ef.txt", [ef_line()])).table,
+        forms_t.diagnoses,
+        vocab,
+    )
+    rows = [
+        r for r in cdm["condition_occurrence"].to_pylist() if r["condition_source_value"] == "J189"
+    ]
+    assert [r["condition_concept_id"] for r in rows] == [900000101, 900000102]
+    assert {r["condition_source_concept_id"] for r in rows} == {900000001}
+    ids = [r["condition_occurrence_id"] for r in cdm["condition_occurrence"].to_pylist()]
+    assert ids == list(range(1, len(ids) + 1))
     assert report.invariant_problems == []
 
 
