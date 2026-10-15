@@ -1,5 +1,8 @@
 # jpomop
 
+[![PyPI](https://img.shields.io/pypi/v/jpomop)](https://pypi.org/project/jpomop/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
 jpomop converts Japanese DPC inpatient data to the OMOP Common Data Model v5.4.
 It reads two DPC files: Form 1 (様式1) and the EF file (入院EF統合ファイル).
 
@@ -14,6 +17,18 @@ I tested it with synthetic data and the examples in the specification.
 I have not tried it with real hospital data or measured mapping rates with a full Athena vocabulary yet.
 
 I plan to release v0.1 at the end of November 2026.
+
+## What it looks like
+
+These are from [examples/walkthrough_ja.ipynb](https://github.com/kojikojikojikoji/jpomop/blob/main/examples/walkthrough_ja.ipynb) (synthetic data only). [walkthrough_en.ipynb](https://github.com/kojikojikojikoji/jpomop/blob/main/examples/walkthrough_en.ipynb) has the same steps in English.
+
+Files with four planted errors. Each error gives one row with the file, line, field, value and rule:
+
+![Validation of broken files](docs/images/validate_broken_files.png)
+
+Conversion of 100 synthetic patients and 120 stays. The report lists rows per table and the rows left out, with the reason:
+
+![Conversion report](docs/images/convert_report.png)
 
 ## Try it
 
